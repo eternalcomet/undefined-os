@@ -2,9 +2,9 @@
 #![no_main]
 #![doc = include_str!("../README.md")]
 
+extern crate alloc;
 #[macro_use]
 extern crate axlog;
-extern crate alloc;
 
 mod syscall;
 
@@ -24,7 +24,15 @@ fn main() {
             .map(Into::into)
             .collect::<Vec<_>>();
 
+        info!(
+            "[task manager] Running user task: {} with args: {:?}",
+            testcase, args
+        );
+
         let exit_code = run_user_app(&args, &[]);
-        info!("User task {} exited with code: {:?}", testcase, exit_code);
+        info!(
+            "[task manager] User task {} exited with code: {:?}",
+            testcase, exit_code
+        );
     }
 }

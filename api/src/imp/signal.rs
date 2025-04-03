@@ -23,3 +23,14 @@ pub fn sys_rt_sigaction(
     warn!("sys_rt_sigaction: not implemented");
     Ok(0)
 }
+
+// TODO: [stub] The method signature is not correct yet
+pub fn sys_rt_sigtimedwait(
+    _signum: i32,
+    _act: UserConstPtr<c_void>,
+    _old_act: UserPtr<c_void>,
+    _sig_set_size: usize,
+) -> LinuxResult<isize> {
+    warn!("[sys_rt_sigaction] not implemented yet");
+    Ok(0)
+}

@@ -46,6 +46,12 @@ pub fn sys_getppid() -> LinuxResult<isize> {
     Ok(axtask::current().task_ext().get_parent() as _)
 }
 
+// TODO: [dummy]
+#[apply(syscall_instrument)]
+pub fn sys_gettid() -> LinuxResult<isize> {
+    Ok(current().task_ext().proc_id as _)
+}
+
 pub fn sys_exit(status: i32) -> ! {
     let curr = current();
     let clear_child_tid = curr.task_ext().clear_child_tid() as *mut i32;
@@ -140,6 +146,25 @@ pub fn sys_clone(
     } else {
         Err(LinuxError::ENOMEM)
     }
+}
+
+// TODO: [incomplete]
+#[cfg(target_arch = "x86_64")]
+#[apply(syscall_instrument)]
+pub fn sys_fork() -> LinuxResult<isize> {
+    sys_clone(17, 0, 0, 0, 0)
+}
+
+// TODO: [stub] The method signature is not correct yet
+#[apply(syscall_instrument)]
+pub fn sys_prlimit64(
+    _pid: i32,
+    _resource: i32,
+    _new_limit: UserConstPtr<usize>,
+    _old_limit: UserPtr<usize>,
+) -> LinuxResult<isize> {
+    warn!("[sys_prlimit64] Not implemented yet");
+    Ok(0)
 }
 
 #[apply(syscall_instrument)]

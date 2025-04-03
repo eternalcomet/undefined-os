@@ -9,7 +9,7 @@ use syscalls::Sysno;
 
 #[register_trap_handler(SYSCALL)]
 fn handle_syscall(tf: &TrapFrame, syscall_num: usize) -> isize {
-    info!("Syscall {:?}", Sysno::from(syscall_num as u32));
+    info!("[syscall] <{:?}> begin", Sysno::from(syscall_num as u32));
     time_stat_from_user_to_kernel();
     let result: LinuxResult<isize> = match Sysno::from(syscall_num as u32) {
         Sysno::read => sys_read(tf.arg0() as _, tf.arg1().into(), tf.arg2() as _),
@@ -117,6 +117,23 @@ fn handle_syscall(tf: &TrapFrame, syscall_num: usize) -> isize {
             tf.arg2().into(),
             tf.arg3() as _,
         ),
+        #[cfg(target_arch = "x86_64")]
+        Sysno::fork => sys_fork(),
+        Sysno::gettid => sys_gettid(),
+        Sysno::prlimit64 => sys_prlimit64(
+            tf.arg0() as _,
+            tf.arg1() as _,
+            tf.arg2().into(),
+            tf.arg3().into(),
+        ),
+        Sysno::rt_sigtimedwait => sys_rt_sigtimedwait(
+            tf.arg0() as _,
+            tf.arg1().into(),
+            tf.arg2().into(),
+            tf.arg3() as _,
+        ),
+        Sysno::statfs => sys_statfs(tf.arg0().into(), tf.arg1().into()),
+
         _ => {
             warn!("Unimplemented syscall: {}", syscall_num);
             axtask::exit(LinuxError::ENOSYS as _)
@@ -125,7 +142,7 @@ fn handle_syscall(tf: &TrapFrame, syscall_num: usize) -> isize {
     let ans = result.unwrap_or_else(|err| -err.code() as _);
     time_stat_from_kernel_to_user();
     info!(
-        "Syscall {:?} return {}",
+        "[syscall] <{:?}> return {}",
         Sysno::from(syscall_num as u32),
         ans
     );
