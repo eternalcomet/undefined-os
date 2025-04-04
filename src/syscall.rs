@@ -141,6 +141,7 @@ fn handle_syscall(tf: &TrapFrame, syscall_num: usize) -> isize {
             tf.arg3() as _,
         ),
         Sysno::statfs => sys_statfs(tf.arg0().into(), tf.arg1().into()),
+        #[cfg(target_arch = "x86_64")]
         Sysno::unlink => sys_unlink(tf.arg0().into()),
         _ => {
             warn!("Unimplemented syscall: {}", syscall_num);
