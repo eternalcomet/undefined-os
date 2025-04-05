@@ -306,23 +306,28 @@ pub enum FsType {
     EXT4_SUPER_MAGIC = 0xEF53,
 }
 
-// TODO: [incomplete] Add more file system types
+// TODO: [dummy] return dummy values
 #[apply(syscall_instrument)]
 pub fn sys_statfs(path: UserConstPtr<c_char>, buf: UserPtr<StatFs>) -> LinuxResult<isize> {
     let path = path.get_as_str()?;
     let path = arceos_posix_api::handle_file_path(-1, Some(path.as_ptr() as _), false)?;
-    let buf = buf.get()?;
 
+    // dummy data
     let stat_fs = StatFs {
         f_type: FsType::EXT4_SUPER_MAGIC as _,
         f_bsize: 4096,
         f_namelen: 255,
         f_frsize: 4096,
+        f_blocks: 100000,
+        f_bfree: 50000,
+        f_bavail: 40000,
+        f_files: 1000,
+        f_ffree: 500,
         ..Default::default()
     };
 
     unsafe {
-        buf.write(stat_fs);
+        buf.get()?.write(stat_fs);
     }
     Ok(0)
 }
