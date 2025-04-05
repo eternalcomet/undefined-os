@@ -42,7 +42,7 @@ fn handle_syscall(tf: &TrapFrame, syscall_num: usize) -> isize {
             tf.arg4() as _,
         ),
         Sysno::wait4 => sys_wait4(tf.arg0() as _, tf.arg1().into(), tf.arg2() as _),
-        Sysno::pipe2 => sys_pipe2(tf.arg0().into()),
+        Sysno::pipe2 => sys_pipe2(tf.arg0().into(), tf.arg1() as _),
         Sysno::close => sys_close(tf.arg0() as _),
         Sysno::chdir => sys_chdir(tf.arg0().into()),
         Sysno::mkdirat => sys_mkdirat(tf.arg0() as _, tf.arg1().into(), tf.arg2() as _),
@@ -123,6 +123,8 @@ fn handle_syscall(tf: &TrapFrame, syscall_num: usize) -> isize {
         Sysno::fork => sys_fork(),
         Sysno::gettid => sys_gettid(),
         Sysno::lseek => sys_lseek(tf.arg0() as _, tf.arg1() as _, tf.arg2() as _),
+        #[cfg(target_arch = "x86_64")]
+        Sysno::pipe => sys_pipe(tf.arg0().into()),
         Sysno::pread64 => sys_pread64(
             tf.arg0() as _,
             tf.arg1().into(),
