@@ -125,6 +125,8 @@ fn handle_syscall(tf: &TrapFrame, syscall_num: usize) -> isize {
         Sysno::lseek => sys_lseek(tf.arg0() as _, tf.arg1() as _, tf.arg2() as _),
         #[cfg(target_arch = "x86_64")]
         Sysno::pipe => sys_pipe(tf.arg0().into()),
+        #[cfg(target_arch = "x86_64")]
+        Sysno::poll => sys_poll(tf.arg0().into(), tf.arg1() as _, tf.arg2() as _),
         Sysno::pread64 => sys_pread64(
             tf.arg0() as _,
             tf.arg1().into(),
