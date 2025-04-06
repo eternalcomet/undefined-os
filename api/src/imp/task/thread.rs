@@ -1,6 +1,7 @@
 use core::{ffi::c_char, ptr};
 
 use alloc::vec::Vec;
+use arceos_posix_api::{FD_TABLE, close_all_file_like};
 use axerrno::{LinuxError, LinuxResult};
 use axtask::{TaskExtRef, current, yield_now};
 use macro_rules_attribute::apply;
@@ -63,12 +64,14 @@ pub fn sys_exit(status: i32) -> ! {
         }
         // TODO: wake up threads, which are blocked by futex, and waiting for the address pointed by clear_child_tid
     }
+    // close any open file descriptors belonging to the process
+    close_all_file_like();
     axtask::exit(status);
 }
 
 pub fn sys_exit_group(status: i32) -> ! {
     warn!("Temporarily replace sys_exit_group with sys_exit");
-    axtask::exit(status);
+    sys_exit(status);
 }
 
 /// To set the clear_child_tid field in the task extended data.
