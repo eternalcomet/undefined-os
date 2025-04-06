@@ -1,8 +1,9 @@
-use core::ffi::{c_int, c_ulong};
+use core::ffi::{c_int, c_ulong, c_void};
 
-use crate::ptr::{PtrWrapper, UserPtr};
+use crate::ptr::{PtrWrapper, UserConstPtr, UserPtr};
 use arceos_posix_api as api;
 use arceos_posix_api::PollFd;
+use arceos_posix_api::ctypes::timespec;
 use axerrno::LinuxResult;
 
 pub fn sys_dup(old_fd: c_int) -> LinuxResult<isize> {
@@ -29,4 +30,21 @@ pub fn sys_poll(fds: UserPtr<PollFd>, nfds: c_ulong, timeout: c_int) -> LinuxRes
     let fds = fds.get_as_array(nfds as _)?;
     let fds: &mut [PollFd] = unsafe { core::slice::from_raw_parts_mut(fds, nfds as _) };
     Ok(api::sys_poll(fds, timeout) as _)
+}
+
+pub fn sys_ppoll(
+    fds: UserPtr<PollFd>,
+    nfds: c_ulong,
+    timeout: UserConstPtr<timespec>,
+    sigmask: UserConstPtr<c_void>,
+) -> LinuxResult<isize> {
+    let fds = fds.get_as_array(nfds as _)?;
+    let fds: &mut [PollFd] = unsafe { core::slice::from_raw_parts_mut(fds, nfds as _) };
+    let timeout = timeout
+        .nullable(UserConstPtr::get)?
+        .unwrap_or(core::ptr::null());
+    let sigmask = sigmask
+        .nullable(UserConstPtr::get)?
+        .unwrap_or(core::ptr::null());
+    Ok(api::sys_ppoll(fds, timeout, sigmask) as _)
 }

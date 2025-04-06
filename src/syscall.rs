@@ -25,7 +25,7 @@ fn handle_syscall(tf: &TrapFrame, syscall_num: usize) -> isize {
         Sysno::ioctl => sys_ioctl(tf.arg0() as _, tf.arg1() as _, tf.arg2().into()),
         Sysno::writev => sys_writev(tf.arg0() as _, tf.arg1().into(), tf.arg2() as _),
         Sysno::sched_yield => sys_sched_yield(),
-        Sysno::nanosleep => sys_nanosleep(tf.arg0().into(), tf.arg1().into()),
+        // Sysno::nanosleep => sys_nanosleep(tf.arg0().into(), tf.arg1().into()),
         Sysno::getpid => sys_getpid(),
         Sysno::getppid => sys_getppid(),
         Sysno::exit => sys_exit(tf.arg0() as _),
@@ -127,6 +127,12 @@ fn handle_syscall(tf: &TrapFrame, syscall_num: usize) -> isize {
         Sysno::pipe => sys_pipe(tf.arg0().into()),
         #[cfg(target_arch = "x86_64")]
         Sysno::poll => sys_poll(tf.arg0().into(), tf.arg1() as _, tf.arg2() as _),
+        Sysno::ppoll => sys_ppoll(
+            tf.arg0().into(),
+            tf.arg1() as _,
+            tf.arg2().into(),
+            tf.arg3().into(),
+        ),
         Sysno::pread64 => sys_pread64(
             tf.arg0() as _,
             tf.arg1().into(),
