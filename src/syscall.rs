@@ -158,6 +158,8 @@ fn handle_syscall(tf: &TrapFrame, syscall_num: usize) -> isize {
             tf.arg2().into(),
             tf.arg3() as _,
         ),
+        #[cfg(target_arch = "x86_64")]
+        Sysno::stat => sys_stat(tf.arg0().into(), tf.arg1().into()),
         Sysno::statfs => sys_statfs(tf.arg0().into(), tf.arg1().into()),
         #[cfg(target_arch = "x86_64")]
         Sysno::unlink => sys_unlink(tf.arg0().into()),

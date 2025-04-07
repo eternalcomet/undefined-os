@@ -92,6 +92,31 @@ pub fn sys_fstat(fd: i32, kstatbuf: UserPtr<Kstat>) -> LinuxResult<isize> {
     Ok(0)
 }
 
+pub fn sys_stat(path: UserConstPtr<c_char>, kstatbuf: UserPtr<Kstat>) -> LinuxResult<isize> {
+    let path = path.get_as_str()?;
+    let path = arceos_posix_api::handle_file_path(-1, Some(path.as_ptr() as _), false)?;
+
+    let kstatbuf = kstatbuf.get()?;
+
+    let mut statbuf = arceos_posix_api::ctypes::stat::default();
+    let result = unsafe {
+        arceos_posix_api::sys_stat(
+            path.as_ptr() as _,
+            &mut statbuf as *mut arceos_posix_api::ctypes::stat,
+        )
+    };
+    if result < 0 {
+        return Ok(result as _);
+    }
+
+    unsafe {
+        let kstat = Kstat::from(statbuf);
+        kstatbuf.write(kstat);
+    }
+
+    Ok(0)
+}
+
 #[apply(syscall_instrument)]
 pub fn sys_fstatat(
     dir_fd: isize,
