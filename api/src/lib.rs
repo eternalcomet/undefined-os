@@ -1,10 +1,11 @@
 #![no_std]
 
+extern crate alloc;
 #[macro_use]
 extern crate axlog;
-extern crate alloc;
 
 mod imp;
+pub mod interface;
 mod ptr;
 
 pub use imp::*;

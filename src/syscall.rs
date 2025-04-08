@@ -65,7 +65,7 @@ fn handle_syscall(tf: &TrapFrame, syscall_num: usize) -> isize {
         ),
         Sysno::unlinkat => sys_unlinkat(tf.arg0() as _, tf.arg1().into(), tf.arg2() as _),
         Sysno::uname => sys_uname(tf.arg0().into()),
-        Sysno::fstat => sys_fstat(tf.arg0() as _, tf.arg1().into()),
+        Sysno::fstat => interface::fs::sys_fstat(tf.arg0() as _, tf.arg1().into()),
         Sysno::mount => sys_mount(
             tf.arg0().into(),
             tf.arg1().into(),
@@ -75,14 +75,14 @@ fn handle_syscall(tf: &TrapFrame, syscall_num: usize) -> isize {
         ) as _,
         Sysno::umount2 => sys_umount2(tf.arg0().into(), tf.arg1() as _) as _,
         #[cfg(target_arch = "x86_64")]
-        Sysno::newfstatat => sys_fstatat(
+        Sysno::newfstatat => interface::fs::sys_fstatat(
             tf.arg0() as _,
             tf.arg1().into(),
             tf.arg2().into(),
             tf.arg3() as _,
         ),
         #[cfg(not(target_arch = "x86_64"))]
-        Sysno::fstatat => sys_fstatat(
+        Sysno::fstatat => interface::fs::sys_fstatat(
             tf.arg0() as _,
             tf.arg1().into(),
             tf.arg2().into(),
@@ -124,6 +124,8 @@ fn handle_syscall(tf: &TrapFrame, syscall_num: usize) -> isize {
         Sysno::gettid => sys_gettid(),
         Sysno::lseek => sys_lseek(tf.arg0() as _, tf.arg1() as _, tf.arg2() as _),
         #[cfg(target_arch = "x86_64")]
+        Sysno::lstat => interface::fs::sys_lstat(tf.arg0().into(), tf.arg1().into()),
+        #[cfg(target_arch = "x86_64")]
         Sysno::pipe => sys_pipe(tf.arg0().into()),
         #[cfg(target_arch = "x86_64")]
         Sysno::poll => sys_poll(tf.arg0().into(), tf.arg1() as _, tf.arg2() as _),
@@ -159,13 +161,21 @@ fn handle_syscall(tf: &TrapFrame, syscall_num: usize) -> isize {
             tf.arg3() as _,
         ),
         #[cfg(target_arch = "x86_64")]
-        Sysno::stat => sys_stat(tf.arg0().into(), tf.arg1().into()),
+        Sysno::stat => interface::fs::sys_fstat(tf.arg0() as _, tf.arg1().into()),
+        // Sysno::stat => sys_stat(tf.arg0().into(), tf.arg1().into()),
         Sysno::statfs => sys_statfs(tf.arg0().into(), tf.arg1().into()),
         #[cfg(target_arch = "x86_64")]
         Sysno::unlink => sys_unlink(tf.arg0().into()),
+        Sysno::utimensat => sys_utimensat(
+            tf.arg0() as _,
+            tf.arg1().into(),
+            tf.arg2().into(),
+            tf.arg3() as _,
+        ),
+        Sysno::sysinfo => axtask::exit(LinuxError::ENOSYS as _),
         _ => {
             warn!("Unimplemented syscall: {}", syscall_num);
-            axtask::exit(LinuxError::ENOSYS as _)
+            Err(LinuxError::ENOSYS)
         }
     };
     let ans = result.unwrap_or_else(|err| -err.code() as _);

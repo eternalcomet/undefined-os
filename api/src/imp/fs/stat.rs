@@ -1,6 +1,6 @@
-use core::ffi::c_char;
-
+use arceos_posix_api::AT_FDCWD;
 use axerrno::{LinuxError, LinuxResult};
+use core::ffi::c_char;
 use macro_rules_attribute::apply;
 
 use crate::{
@@ -94,7 +94,7 @@ pub fn sys_fstat(fd: i32, kstatbuf: UserPtr<Kstat>) -> LinuxResult<isize> {
 
 pub fn sys_stat(path: UserConstPtr<c_char>, kstatbuf: UserPtr<Kstat>) -> LinuxResult<isize> {
     let path = path.get_as_str()?;
-    let path = arceos_posix_api::handle_file_path(-1, Some(path.as_ptr() as _), false)?;
+    let path = arceos_posix_api::handle_file_path(AT_FDCWD, Some(path.as_ptr() as _), false)?;
 
     let kstatbuf = kstatbuf.get()?;
 
@@ -125,6 +125,7 @@ pub fn sys_fstatat(
     _flags: i32,
 ) -> LinuxResult<isize> {
     let path = path.get_as_null_terminated()?;
+    info!("[sys_fstatat] dir_fd: {}, path: {:?}", dir_fd, path);
     let path = arceos_posix_api::handle_file_path(dir_fd, Some(path.as_ptr() as _), false)?;
 
     let kstatbuf = kstatbuf.get()?;
@@ -142,6 +143,7 @@ pub fn sys_fstatat(
 
     unsafe {
         let kstat = Kstat::from(statbuf);
+        debug!("[sys_fstatat] kstat: {:?}", kstat);
         kstatbuf.write(kstat);
     }
 
