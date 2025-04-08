@@ -177,6 +177,8 @@ pub struct StatX {
     pub stx_gid: u32,
     /// File mode (permissions).
     pub stx_mode: u16,
+    /// padding
+    pub _pad0: u16,
     /// Inode number.
     pub stx_ino: u64,
     /// Total size, in bytes.
@@ -207,6 +209,8 @@ pub struct StatX {
     pub stx_dio_mem_align: u32,
     /// Offset alignment for direct I/O.
     pub stx_dio_offset_align: u32,
+    /// Reserved for future use.
+    pub _spare: [u32; 12],
 }
 
 #[apply(syscall_instrument)]
