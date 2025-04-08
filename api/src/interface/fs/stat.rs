@@ -1,10 +1,15 @@
+use crate::StatX;
 use crate::path::{resolve_path, resolve_path_with_parent};
 use crate::ptr::{PtrWrapper, UserConstPtr, UserPtr};
 use crate::status::{FileStatus, TimeSpec, sys_stat_impl};
 use arceos_posix_api::AT_FDCWD;
 use axerrno::LinuxError;
 use axerrno::LinuxResult;
-use core::ffi::{c_char, c_int};
+use core::ffi::{c_char, c_int, c_uint};
+
+// constants
+const AT_EMPTY_PATH: c_int = 0x1000;
+const AT_SYMLINK_NOFOLLOW: c_int = 0x100;
 
 /// File status: struct stat
 #[cfg(target_arch = "x86_64")]
@@ -162,6 +167,7 @@ pub fn sys_stat(path: UserConstPtr<c_char>, stat_buf: UserPtr<Stat>) -> LinuxRes
     }
 }
 
+/// TODO: ignored following symlinks
 pub fn sys_lstat(path: UserConstPtr<c_char>, stat_buf: UserPtr<Stat>) -> LinuxResult<isize> {
     // get params
     let path = path.get_as_str()?;
@@ -230,10 +236,6 @@ pub fn sys_fstatat(
     stat_buf: UserPtr<Stat>,
     flags: c_int,
 ) -> LinuxResult<isize> {
-    // constants
-    const AT_EMPTY_PATH: c_int = 0x1000;
-    const AT_SYMLINK_NOFOLLOW: c_int = 0x100;
-
     // get params
     let path = path.get_as_str().unwrap_or("");
     let stat_buf = stat_buf.get()?;
@@ -243,6 +245,7 @@ pub fn sys_fstatat(
         if dir_fd < 0 && dir_fd != AT_FDCWD as i32 {
             return Err(LinuxError::EBADFD);
         }
+        // TODO: some flags are ignored
         if path.is_empty() && (flags & AT_EMPTY_PATH == 0) {
             return Err(LinuxError::ENOENT);
         }
@@ -266,6 +269,53 @@ pub fn sys_fstatat(
             debug!(
                 "[syscall] fstatat(dirfd={}, pathname={:?}, statbuf={:p}, flags={}) = {:?}",
                 dir_fd, path, stat_buf, flags, err
+            );
+            Err(err)
+        }
+    }
+}
+
+pub fn sys_statx(
+    dir_fd: c_int,
+    path: UserConstPtr<c_char>,
+    flags: c_int,
+    _mask: c_uint,
+    statx_buf: UserPtr<StatX>,
+) -> LinuxResult<isize> {
+    // get params
+    let path = path.get_as_str().unwrap_or("");
+    let statx_buf = statx_buf.get()?;
+
+    // perform syscall
+    let result = (|| -> LinuxResult<_> {
+        if dir_fd < 0 && dir_fd != AT_FDCWD as i32 {
+            return Err(LinuxError::EBADFD);
+        }
+        // TODO: some flags are ignored
+        if path.is_empty() && (flags & AT_EMPTY_PATH == 0) {
+            return Err(LinuxError::ENOENT);
+        }
+        let follow_symlinks = flags & AT_SYMLINK_NOFOLLOW == 0;
+        let file_status = sys_stat_impl(dir_fd, path, follow_symlinks)?;
+        // TODO: add more fields
+        Ok(StatX::from(file_status))
+    })();
+
+    // check result
+    match result {
+        Ok(statx) => {
+            debug!(
+                "[syscall] statx(dirfd={}, pathname={:?}, flags={}, mask={}, statx_buf={:?}) = {}",
+                dir_fd, path, flags, _mask, statx, 0
+            );
+            // copy to user space
+            unsafe { statx_buf.write(statx.into()) }
+            Ok(0)
+        }
+        Err(err) => {
+            debug!(
+                "[syscall] statx(dirfd={}, pathname={:?}, flags={}, mask={}, statx_buf={:p}) = {:?}",
+                dir_fd, path, flags, _mask, statx_buf, err
             );
             Err(err)
         }

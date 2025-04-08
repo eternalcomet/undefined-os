@@ -3,6 +3,7 @@ use axerrno::{LinuxError, LinuxResult};
 use core::ffi::c_char;
 use macro_rules_attribute::apply;
 
+use crate::status::{FileStatus, TimeSpec};
 use crate::{
     ptr::{PtrWrapper, UserConstPtr, UserPtr},
     syscall_instrument,
@@ -157,6 +158,15 @@ pub struct FsStatxTimestamp {
     pub tv_nsec: u32,
 }
 
+impl From<TimeSpec> for FsStatxTimestamp {
+    fn from(ts: TimeSpec) -> Self {
+        Self {
+            tv_sec: ts.seconds as i64,
+            tv_nsec: ts.nanoseconds as u32,
+        }
+    }
+}
+
 /// statx - get file status (extended)
 /// Standard C library (libc, -lc)
 /// <https://man7.org/linux/man-pages/man2/statx.2.html>
@@ -211,6 +221,27 @@ pub struct StatX {
     pub stx_dio_offset_align: u32,
     /// Reserved for future use.
     pub _spare: [u32; 12],
+}
+
+impl From<FileStatus> for StatX {
+    fn from(fs: FileStatus) -> Self {
+        Self {
+            stx_blksize: fs.block_size as _,
+            stx_attributes: fs.mode as _,
+            stx_nlink: fs.n_link as _,
+            stx_uid: fs.uid,
+            stx_gid: fs.gid,
+            stx_mode: fs.mode as _,
+            stx_ino: fs.inode as _,
+            stx_size: fs.size as _,
+            stx_blocks: fs.n_blocks as _,
+            stx_attributes_mask: 0x7FF,
+            stx_atime: fs.access_time.into(),
+            stx_ctime: fs.change_time.into(),
+            stx_mtime: fs.modify_time.into(),
+            ..Default::default()
+        }
+    }
 }
 
 #[apply(syscall_instrument)]
