@@ -1,3 +1,4 @@
+use alloc::string::{String, ToString};
 use core::{ffi::c_char, ptr};
 
 use alloc::vec::Vec;
@@ -231,9 +232,27 @@ pub fn sys_execve(
         path_str, args, envs
     );
 
-    if let Err(e) = exec(path_str, &args, &envs) {
-        error!("Failed to exec: {:?}", e);
-        return Err::<isize, _>(LinuxError::ENOSYS);
+    // TODO: an ugly workaround for shebang
+    if path_str.ends_with(".sh") {
+        const BUSYBOX: &str = "/musl/busybox";
+        info!("[execve] shebang detected, calling sh...");
+        let mut new_args: Vec<String> = Vec::with_capacity(args.len() + 1);
+        new_args.push(BUSYBOX.into());
+        new_args.push("sh".into());
+        new_args.extend(args);
+        info!(
+            "execve: path: {:?}, args: {:?}, envs: {:?}",
+            BUSYBOX, new_args, envs
+        );
+        if let Err(e) = exec(BUSYBOX, &new_args, &envs) {
+            error!("Failed to exec: {:?}", e);
+            return Err::<isize, _>(LinuxError::ENOSYS);
+        }
+    } else {
+        if let Err(e) = exec(path_str, &args, &envs) {
+            error!("Failed to exec: {:?}", e);
+            return Err::<isize, _>(LinuxError::ENOSYS);
+        }
     }
 
     unreachable!("execve should never return");
