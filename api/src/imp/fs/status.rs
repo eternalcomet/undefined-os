@@ -1,4 +1,4 @@
-use crate::imp::fs::fs::open_file;
+use crate::imp::fs::fs::open_file_like;
 use crate::path::resolve_path_with_parent;
 use arceos_posix_api::{FileLike, ctypes};
 use axerrno::LinuxResult;
@@ -79,7 +79,7 @@ impl From<ctypes::timespec> for TimeSpec {
 /// TODO: add support for symlink
 pub fn sys_stat_impl(dir_fd: i32, path: &str, _follow_symlinks: bool) -> LinuxResult<FileStatus> {
     let path = resolve_path_with_parent(dir_fd, path)?;
-    let file = open_file(path.as_str(), None)?;
+    let file = open_file_like(path.as_str(), None)?;
     let file_status: FileStatus = file.stat()?.into();
     Ok(file_status)
 }
