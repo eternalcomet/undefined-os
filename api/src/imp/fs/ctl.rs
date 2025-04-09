@@ -1,8 +1,8 @@
 use core::ffi::{c_char, c_void};
 
-use alloc::string::ToString;
 use arceos_posix_api::AT_FDCWD;
 use axerrno::{AxError, LinuxError, LinuxResult};
+use axfs::fops::DirEntry;
 use macro_rules_attribute::apply;
 
 use crate::{
@@ -57,7 +57,6 @@ struct DirEnt {
     d_off: i64,
     d_reclen: u16,
     d_type: u8,
-    d_name: [u8; 0],
 }
 
 #[allow(dead_code)]
@@ -86,10 +85,8 @@ impl From<axfs::api::FileType> for FileType {
 }
 
 impl DirEnt {
-    const FIXED_SIZE: usize = core::mem::size_of::<u64>()
-        + core::mem::size_of::<i64>()
-        + core::mem::size_of::<u16>()
-        + core::mem::size_of::<u8>();
+    const FIXED_SIZE: usize =
+        size_of::<u64>() + size_of::<i64>() + size_of::<u16>() + size_of::<u8>();
 
     fn new(ino: u64, off: i64, reclen: usize, file_type: FileType) -> Self {
         Self {
@@ -97,48 +94,7 @@ impl DirEnt {
             d_off: off,
             d_reclen: reclen as u16,
             d_type: file_type as u8,
-            d_name: [],
         }
-    }
-
-    unsafe fn write_name(&mut self, name: &[u8]) {
-        unsafe {
-            core::ptr::copy_nonoverlapping(name.as_ptr(), self.d_name.as_mut_ptr(), name.len());
-        }
-    }
-}
-
-// Directory buffer for getdents64 syscall
-struct DirBuffer<'a> {
-    buf: &'a mut [u8],
-    offset: usize,
-}
-
-impl<'a> DirBuffer<'a> {
-    fn new(buf: &'a mut [u8]) -> Self {
-        Self { buf, offset: 0 }
-    }
-
-    fn remaining_space(&self) -> usize {
-        self.buf.len().saturating_sub(self.offset)
-    }
-
-    fn can_fit_entry(&self, entry_size: usize) -> bool {
-        self.remaining_space() >= entry_size
-    }
-
-    fn write_entry(&mut self, dirent: DirEnt, name: &[u8]) -> Result<(), ()> {
-        if !self.can_fit_entry(dirent.d_reclen as usize) {
-            return Err(());
-        }
-        unsafe {
-            let entry_ptr = self.buf.as_mut_ptr().add(self.offset) as *mut DirEnt;
-            entry_ptr.write(dirent);
-            (*entry_ptr).write_name(name);
-        }
-
-        self.offset += dirent.d_reclen as usize;
-        Ok(())
     }
 }
 
@@ -150,68 +106,52 @@ pub fn sys_getdents64(fd: i32, buf: UserPtr<c_void>, len: usize) -> LinuxResult<
         return Err(LinuxError::EINVAL);
     }
 
-    let path = match arceos_posix_api::Directory::from_fd(fd).map(|dir| dir.path().to_string()) {
-        Ok(path) => path,
-        Err(err) => {
-            warn!("Invalid directory descriptor: {:?}", err);
-            return Err(LinuxError::EBADF);
+    let directory = arceos_posix_api::Directory::from_fd(fd)?;
+    let directory = directory.inner();
+    let user_buffer = buf as *mut u8;
+    let mut current_offset: usize = 0;
+    loop {
+        // read directory entries into buffer
+        if current_offset + DirEnt::FIXED_SIZE + 2 > len {
+            // there is no enough space for another entry
+            break;
         }
-    };
-
-    let mut buffer =
-        unsafe { DirBuffer::new(core::slice::from_raw_parts_mut(buf as *mut u8, len)) };
-
-    let (initial_offset, count) = unsafe {
-        let mut buf_offset = 0;
-        let mut count = 0;
-        while buf_offset + DirEnt::FIXED_SIZE <= len {
-            let dir_ent = *(buf.add(buf_offset) as *const DirEnt);
-            if dir_ent.d_reclen == 0 {
-                break;
-            }
-
-            buf_offset += dir_ent.d_reclen as usize;
-            assert_eq!(dir_ent.d_off, buf_offset as i64);
-            count += 1;
+        // we don't know how many entries can be contained by the buf provided by user
+        // so we make the buffer small(1)
+        let mut entry_buffer = [DirEntry::default()];
+        let count = directory.lock().read_dir(&mut entry_buffer)?;
+        if count == 0 {
+            // no more entries
+            break;
         }
-        (buf_offset as i64, count)
-    };
+        let entry = &entry_buffer[0];
+        let name = entry.name_as_bytes();
+        let entry_type = FileType::from(entry.entry_type());
+        let entry_length = DirEnt::FIXED_SIZE + name.len() + 1;
+        if current_offset + entry_length > len {
+            // check again
+            // there is no enough space for another entry
+            break;
+        }
 
-    axfs::api::read_dir(&path)
-        .map(|entries| {
-            let mut total_size = initial_offset as usize;
-            let mut current_offset = initial_offset;
+        let user_dir_entry = DirEnt::new(
+            1,
+            (current_offset + entry_length) as _,
+            entry_length,
+            entry_type,
+        );
+        unsafe {
+            // let pointer be *mut u8 so that the offset can be calculated
+            let entry_ptr = user_buffer.add(current_offset);
+            (entry_ptr as *mut DirEnt).write(user_dir_entry);
+            let name_ptr = entry_ptr.add(DirEnt::FIXED_SIZE);
+            core::ptr::copy_nonoverlapping(name.as_ptr(), name_ptr, name.len());
+            *name_ptr.add(name.len()) = 0; // null-terminate the name
+        }
 
-            for entry in entries.flatten().skip(count) {
-                let mut name = entry.file_name();
-                name.push('\0');
-                let name_bytes = name.as_bytes();
-
-                let entry_size = DirEnt::FIXED_SIZE + name_bytes.len();
-                current_offset += entry_size as i64;
-
-                let dirent = DirEnt::new(
-                    1,
-                    current_offset,
-                    entry_size,
-                    FileType::from(entry.file_type()),
-                );
-
-                if buffer.write_entry(dirent, name_bytes).is_err() {
-                    break;
-                }
-
-                total_size += entry_size;
-            }
-
-            if total_size > 0 && buffer.can_fit_entry(DirEnt::FIXED_SIZE) {
-                let terminal = DirEnt::new(1, current_offset, 0, FileType::Reg);
-                let _ = buffer.write_entry(terminal, &[]);
-            }
-
-            total_size as isize
-        })
-        .map_err(|err| err.into())
+        current_offset += entry_length;
+    }
+    Ok(current_offset as _)
 }
 
 /// create a link from new_path to old_path
