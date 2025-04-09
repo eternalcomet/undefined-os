@@ -1,11 +1,10 @@
 use crate::StatX;
-use crate::path::{resolve_path, resolve_path_with_parent};
 use crate::ptr::{PtrWrapper, UserConstPtr, UserPtr};
 use crate::status::{FileStatus, TimeSpec, sys_stat_impl};
 use arceos_posix_api::AT_FDCWD;
 use axerrno::LinuxError;
 use axerrno::LinuxResult;
-use core::ffi::{c_char, c_int, c_uint};
+use core::ffi::{c_char, c_int, c_long, c_uint, c_ulong};
 
 // constants
 const AT_EMPTY_PATH: c_int = 0x1000;
@@ -15,30 +14,30 @@ const AT_SYMLINK_NOFOLLOW: c_int = 0x100;
 #[cfg(target_arch = "x86_64")]
 #[derive(Debug, Clone, Copy, Default)]
 #[repr(C)]
-pub struct Stat {
+pub struct UserStat {
     /// ID of device containing file
-    pub st_dev: usize,
+    pub st_dev: c_ulong,
     /// inode number
-    pub st_ino: usize,
+    pub st_ino: c_ulong,
     /// number of hard links
     /// note that the field sequence is different from other archs
-    pub st_nlink: usize,
+    pub st_nlink: c_ulong,
     /// file type and mode
-    pub st_mode: u32,
+    pub st_mode: c_uint,
     /// user ID of owner
-    pub st_uid: u32,
+    pub st_uid: c_uint,
     /// group ID of owner
-    pub st_gid: u32,
+    pub st_gid: c_uint,
     /// paddings for arch x86_64
-    pub _pad0: i32,
+    pub _pad0: c_int,
     /// device ID (if special file)
-    pub st_rdev: usize,
+    pub st_rdev: c_ulong,
     /// total size, in bytes
-    pub st_size: isize,
+    pub st_size: c_long,
     /// Block size for filesystem I/O
-    pub st_blksize: isize,
+    pub st_blksize: c_long,
     /// number of blocks allocated
-    pub st_blocks: isize,
+    pub st_blocks: c_long,
     /// time of last access
     pub st_atime: TimeSpec,
     /// time of last modification
@@ -46,23 +45,23 @@ pub struct Stat {
     /// time of last status change
     pub st_ctime: TimeSpec,
     /// glibc reserved for arch x86_64
-    pub _glibc_reserved: [isize; 3],
+    pub _glibc_reserved: [c_long; 3],
 }
 
 #[cfg(target_arch = "x86_64")]
-impl From<FileStatus> for Stat {
+impl From<FileStatus> for UserStat {
     fn from(fs: FileStatus) -> Self {
-        Stat {
-            st_dev: fs.dev,
-            st_ino: fs.inode,
-            st_nlink: fs.n_link,
+        UserStat {
+            st_dev: fs.dev as c_ulong,
+            st_ino: fs.inode as c_ulong,
+            st_nlink: fs.n_link as c_ulong,
             st_mode: fs.mode,
             st_uid: fs.uid,
             st_gid: fs.gid,
-            st_rdev: fs.rdev,
-            st_size: fs.size,
-            st_blksize: fs.block_size,
-            st_blocks: fs.n_blocks,
+            st_rdev: fs.rdev as c_ulong,
+            st_size: fs.size as c_long,
+            st_blksize: fs.block_size as c_long,
+            st_blocks: fs.n_blocks as c_long,
             st_atime: fs.access_time,
             st_mtime: fs.modify_time,
             st_ctime: fs.change_time,
@@ -72,36 +71,36 @@ impl From<FileStatus> for Stat {
 }
 
 #[cfg(target_arch = "x86_64")]
-const _: () = assert!(size_of::<Stat>() == 144, "size of Stat is not 144");
+const _: () = assert!(size_of::<UserStat>() == 144, "size of Stat is not 144");
 
 #[cfg(not(target_arch = "x86_64"))]
 #[derive(Debug, Clone, Copy, Default)]
 #[repr(C)]
-pub struct Stat {
+pub struct UserStat {
     /// ID of device containing file
-    pub st_dev: usize,
+    pub st_dev: c_ulong,
     /// inode number
-    pub st_ino: usize,
+    pub st_ino: c_ulong,
     /// file type and mode
-    pub st_mode: u32,
+    pub st_mode: c_uint,
     /// number of hard links
-    pub st_nlink: u32,
+    pub st_nlink: c_uint,
     /// user ID of owner
-    pub st_uid: u32,
+    pub st_uid: c_uint,
     /// group ID of owner
-    pub st_gid: u32,
+    pub st_gid: c_uint,
     /// device ID (if special file)
-    pub st_rdev: usize,
+    pub st_rdev: c_ulong,
     /// paddings for arch non x86_64
-    pub _pad0: isize,
+    pub _pad0: c_long,
     /// total size, in bytes
-    pub st_size: isize,
+    pub st_size: c_long,
     /// Block size for filesystem I/O
-    pub st_blksize: i32,
+    pub st_blksize: c_int,
     /// paddings for arch non x86_64
-    pub _pad1: i32,
+    pub _pad1: c_int,
     /// number of blocks allocated
-    pub st_blocks: isize,
+    pub st_blocks: c_long,
     /// time of last access
     pub st_atime: TimeSpec,
     /// time of last modification
@@ -109,23 +108,23 @@ pub struct Stat {
     /// time of last status change
     pub st_ctime: TimeSpec,
     /// reserved for arch non x86_64
-    pub _unused: [i32; 2],
+    pub _unused: [c_int; 2],
 }
 
 #[cfg(not(target_arch = "x86_64"))]
-impl From<FileStatus> for Stat {
+impl From<FileStatus> for UserStat {
     fn from(fs: FileStatus) -> Self {
-        Stat {
-            st_dev: fs.dev,
-            st_ino: fs.inode,
+        UserStat {
+            st_dev: fs.dev as c_ulong,
+            st_ino: fs.inode as c_ulong,
             st_mode: fs.mode,
-            st_nlink: fs.n_link as u32,
+            st_nlink: fs.n_link as c_uint,
             st_uid: fs.uid,
             st_gid: fs.gid,
-            st_rdev: fs.rdev,
-            st_size: fs.size,
-            st_blksize: fs.block_size as i32,
-            st_blocks: fs.n_blocks,
+            st_rdev: fs.rdev as c_ulong,
+            st_size: fs.size as c_long,
+            st_blksize: fs.block_size as c_int,
+            st_blocks: fs.n_blocks as c_long,
             st_atime: fs.access_time,
             st_mtime: fs.modify_time,
             st_ctime: fs.change_time,
@@ -135,9 +134,9 @@ impl From<FileStatus> for Stat {
 }
 
 #[cfg(not(target_arch = "x86_64"))]
-const _: () = assert!(size_of::<Stat>() == 128, "size of Stat is not 128");
+const _: () = assert!(size_of::<UserStat>() == 128, "size of Stat is not 128");
 
-pub fn sys_stat(path: UserConstPtr<c_char>, stat_buf: UserPtr<Stat>) -> LinuxResult<isize> {
+pub fn sys_stat(path: UserConstPtr<c_char>, stat_buf: UserPtr<UserStat>) -> LinuxResult<isize> {
     // get params
     let path = path.get_as_str()?;
     let stat_buf = stat_buf.get()?;
@@ -148,7 +147,7 @@ pub fn sys_stat(path: UserConstPtr<c_char>, stat_buf: UserPtr<Stat>) -> LinuxRes
     // check result
     match result {
         Ok(fs) => {
-            let stat: Stat = fs.into();
+            let stat: UserStat = fs.into();
             debug!(
                 "[syscall] stat(pathname={:?}, statbuf={:?}) = {}",
                 path, stat, 0
@@ -168,7 +167,7 @@ pub fn sys_stat(path: UserConstPtr<c_char>, stat_buf: UserPtr<Stat>) -> LinuxRes
 }
 
 /// TODO: ignored following symlinks
-pub fn sys_lstat(path: UserConstPtr<c_char>, stat_buf: UserPtr<Stat>) -> LinuxResult<isize> {
+pub fn sys_lstat(path: UserConstPtr<c_char>, stat_buf: UserPtr<UserStat>) -> LinuxResult<isize> {
     // get params
     let path = path.get_as_str()?;
     let stat_buf = stat_buf.get()?;
@@ -179,7 +178,7 @@ pub fn sys_lstat(path: UserConstPtr<c_char>, stat_buf: UserPtr<Stat>) -> LinuxRe
     // check result
     match result {
         Ok(fs) => {
-            let stat: Stat = fs.into();
+            let stat: UserStat = fs.into();
             debug!(
                 "[syscall] lstat(pathname={:?}, statbuf={:?}) = {}",
                 path, stat, 0
@@ -198,7 +197,7 @@ pub fn sys_lstat(path: UserConstPtr<c_char>, stat_buf: UserPtr<Stat>) -> LinuxRe
     }
 }
 
-pub fn sys_fstat(fd: c_int, stat_buf: UserPtr<Stat>) -> LinuxResult<isize> {
+pub fn sys_fstat(fd: c_int, stat_buf: UserPtr<UserStat>) -> LinuxResult<isize> {
     // get params
     let stat_buf = stat_buf.get()?;
 
@@ -214,7 +213,7 @@ pub fn sys_fstat(fd: c_int, stat_buf: UserPtr<Stat>) -> LinuxResult<isize> {
     // check result
     match result {
         Ok(fs) => {
-            let stat: Stat = fs.into();
+            let stat: UserStat = fs.into();
             debug!("[syscall] fstat(fd={}, statbuf={:?}) = {}", fd, stat, 0);
             // copy to user space
             unsafe { stat_buf.write(fs.into()) }
@@ -233,7 +232,7 @@ pub fn sys_fstat(fd: c_int, stat_buf: UserPtr<Stat>) -> LinuxResult<isize> {
 pub fn sys_fstatat(
     dir_fd: c_int,
     path: UserConstPtr<c_char>,
-    stat_buf: UserPtr<Stat>,
+    stat_buf: UserPtr<UserStat>,
     flags: c_int,
 ) -> LinuxResult<isize> {
     // get params
@@ -256,7 +255,7 @@ pub fn sys_fstatat(
     // check result
     match result {
         Ok(fs) => {
-            let stat: Stat = fs.into();
+            let stat: UserStat = fs.into();
             debug!(
                 "[syscall] fstatat(dirfd={}, pathname={:?}, statbuf={:?}, flags={}) = {}",
                 dir_fd, path, stat, flags, 0
