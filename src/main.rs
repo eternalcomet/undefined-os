@@ -8,7 +8,7 @@ extern crate axlog;
 
 mod syscall;
 
-use alloc::string::String;
+use alloc::string::{String, ToString};
 use alloc::vec::Vec;
 use starry_core::entry::run_user_app;
 
@@ -43,7 +43,7 @@ fn main() {
             testcase, args
         );
 
-        let exit_code = run_user_app(&args, &[]);
+        let exit_code = run_user_app(&args, &["PATH=/bin".to_string()]);
         info!(
             "[task manager] User task {} exited with code: {:?}",
             testcase, exit_code

@@ -171,6 +171,10 @@ fn handle_syscall(tf: &TrapFrame, syscall_num: usize) -> isize {
             tf.arg2().into(),
             tf.arg3() as _,
         ),
+        #[cfg(target_arch = "x86_64")]
+        Sysno::access => stub_bypass(syscall_num),
+        Sysno::faccessat => stub_bypass(syscall_num),
+        Sysno::kill => stub_bypass(syscall_num),
         Sysno::sysinfo => stub_unimplemented(syscall_num),
         _ => stub_kill(syscall_num),
     };
