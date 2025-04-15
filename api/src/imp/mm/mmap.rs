@@ -76,7 +76,7 @@ pub fn sys_mmap(
     offset: isize,
 ) -> LinuxResult<isize> {
     // Safety: addr is used for mapping, and we won't directly access it.
-    let mut addr = unsafe { addr.into_inner() };
+    let mut addr = unsafe { addr.get_unchecked() };
 
     let curr = current();
     let curr_ext = curr.task_ext();
@@ -160,7 +160,7 @@ pub fn sys_mmap(
 #[apply(syscall_instrument)]
 pub fn sys_munmap(addr: UserPtr<usize>, length: usize) -> LinuxResult<isize> {
     // Safety: addr is used for mapping, and we won't directly access it.
-    let addr = unsafe { addr.into_inner() };
+    let addr = unsafe { addr.get_unchecked() };
 
     let curr = current();
     let curr_ext = curr.task_ext();
@@ -175,7 +175,7 @@ pub fn sys_munmap(addr: UserPtr<usize>, length: usize) -> LinuxResult<isize> {
 #[apply(syscall_instrument)]
 pub fn sys_mprotect(addr: UserPtr<usize>, length: usize, prot: i32) -> LinuxResult<isize> {
     // Safety: addr is used for mapping, and we won't directly access it.
-    let addr = unsafe { addr.into_inner() };
+    let addr = unsafe { addr.get_unchecked() };
 
     // TODO: implement PROT_GROWSUP & PROT_GROWSDOWN
     let Some(permission_flags) = MmapProt::from_bits(prot) else {

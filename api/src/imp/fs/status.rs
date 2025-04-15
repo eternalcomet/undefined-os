@@ -76,6 +76,8 @@ impl From<ctypes::timespec> for TimeSpec {
     }
 }
 
+/// syscall impl: get file status
+/// [Availability] Most
 /// TODO: add support for symlink
 pub fn sys_stat_impl(dir_fd: i32, path: &str, _follow_symlinks: bool) -> LinuxResult<FileStatus> {
     let path = resolve_path_with_parent(dir_fd, path)?;

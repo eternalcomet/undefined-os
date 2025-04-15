@@ -1,8 +1,10 @@
-use core::{alloc::Layout, ffi::c_char, mem, slice, str};
-
+use alloc::format;
+use alloc::string::String;
 use axerrno::{LinuxError, LinuxResult};
 use axhal::paging::MappingFlags;
 use axtask::{TaskExtRef, current};
+use core::fmt::Debug;
+use core::{alloc::Layout, ffi::c_char, mem, slice, str};
 use memory_addr::{MemoryAddr, PAGE_SIZE_4K, VirtAddr, VirtAddrRange};
 use starry_core::mm::access_user_memory;
 
@@ -98,50 +100,50 @@ pub trait PtrWrapper<T>: Sized {
     ///
     /// This function is unsafe because it assumes that the pointer is valid and
     /// points to a valid memory region.
-    unsafe fn into_inner(self) -> Self::Ptr;
+    unsafe fn get_unchecked(&self) -> Self::Ptr;
 
     /// Get the address of the pointer.
     fn address(&self) -> VirtAddr;
 
     /// Get the pointer as a raw pointer to `T`.
-    fn get(self) -> LinuxResult<Self::Ptr> {
+    fn get(&self) -> LinuxResult<Self::Ptr> {
         self.get_as(Layout::new::<T>())
     }
 
     /// Get the pointer as a raw pointer to `T`, validating the memory
     /// region given by the layout.
-    fn get_as(self, layout: Layout) -> LinuxResult<Self::Ptr> {
+    fn get_as(&self, layout: Layout) -> LinuxResult<Self::Ptr> {
         check_region(self.address(), layout, Self::ACCESS_FLAGS)?;
-        unsafe { Ok(self.into_inner()) }
+        unsafe { Ok(self.get_unchecked()) }
     }
 
     /// Get the pointer as a raw pointer to `T`, validating the memory
     /// region specified by the size.
-    fn get_as_bytes(self, size: usize) -> LinuxResult<Self::Ptr> {
+    fn get_as_bytes(&self, size: usize) -> LinuxResult<Self::Ptr> {
         check_region(
             self.address(),
             Layout::from_size_align(size, 1).unwrap(),
             Self::ACCESS_FLAGS,
         )?;
-        unsafe { Ok(self.into_inner()) }
+        unsafe { Ok(self.get_unchecked()) }
     }
 
     /// Get the pointer as a raw pointer to `T`, validating the memory
     /// region given by the layout of `[T; len]`.
-    fn get_as_array(self, len: usize) -> LinuxResult<Self::Ptr> {
+    fn get_as_array(&self, len: usize) -> LinuxResult<Self::Ptr> {
         check_region(
             self.address(),
             Layout::array::<T>(len).unwrap(),
             Self::ACCESS_FLAGS,
         )?;
-        unsafe { Ok(self.into_inner()) }
+        unsafe { Ok(self.get_unchecked()) }
     }
 
-    fn nullable<R>(self, f: impl FnOnce(Self) -> LinuxResult<R>) -> LinuxResult<Option<R>> {
+    fn nullable<R>(self, f: impl FnOnce(&Self) -> LinuxResult<R>) -> LinuxResult<Option<R>> {
         if self.address().as_ptr().is_null() {
             Ok(None)
         } else {
-            f(self).map(Some)
+            f(&self).map(Some)
         }
     }
 }
@@ -163,7 +165,7 @@ impl<T> PtrWrapper<T> for UserPtr<T> {
 
     const ACCESS_FLAGS: MappingFlags = MappingFlags::READ.union(MappingFlags::WRITE);
 
-    unsafe fn into_inner(self) -> Self::Ptr {
+    unsafe fn get_unchecked(&self) -> Self::Ptr {
         self.0
     }
 
@@ -175,13 +177,50 @@ impl<T> PtrWrapper<T> for UserPtr<T> {
 impl<T> UserPtr<T> {
     /// Get the pointer as `&mut [T]`, terminated by a null value, validating
     /// the memory region.
-    pub fn get_as_null_terminated(self) -> LinuxResult<&'static mut [T]>
+    pub fn get_as_null_terminated(&self) -> LinuxResult<&'static mut [T]>
     where
         T: Eq + Default,
     {
         let (ptr, len) = check_null_terminated::<T>(self.address(), Self::ACCESS_FLAGS)?;
         // SAFETY: We've validated the memory region.
         unsafe { Ok(slice::from_raw_parts_mut(ptr as *mut _, len)) }
+    }
+}
+
+impl UserPtr<c_char> {
+    /// Get the pointer as `&str`, validating the memory region.
+    pub fn get_as_str(&self) -> LinuxResult<&'static str> {
+        let slice = self.get_as_null_terminated()?;
+        // SAFETY: c_char is u8
+        let slice = unsafe { mem::transmute::<&[c_char], &[u8]>(slice) };
+
+        str::from_utf8(slice).map_err(|_| LinuxError::EILSEQ)
+    }
+
+    pub fn fmt_trace_as_str(&self) -> String {
+        match self.get_as_str() {
+            Ok(content) => {
+                format!("{:?} @ {:?}", content, self.address())
+            }
+            Err(_) => {
+                format!("<access error> @ {:?}", self.address())
+            }
+        }
+    }
+}
+
+impl<T: Debug> UserPtr<T> {
+    pub fn fmt_trace(&self) -> String {
+        format!("... @ {:?}", self.address())
+    }
+
+    pub fn fmt_trace_content(&self) -> String {
+        match self.get() {
+            Ok(content) => unsafe { format!("{:?} @ {:?}", *content, self.address()) },
+            Err(_) => {
+                format!("<access error> @ {:?}", self.address())
+            }
+        }
     }
 }
 
@@ -202,7 +241,7 @@ impl<T> PtrWrapper<T> for UserConstPtr<T> {
 
     const ACCESS_FLAGS: MappingFlags = MappingFlags::READ;
 
-    unsafe fn into_inner(self) -> Self::Ptr {
+    unsafe fn get_unchecked(&self) -> Self::Ptr {
         self.0
     }
 
@@ -211,10 +250,25 @@ impl<T> PtrWrapper<T> for UserConstPtr<T> {
     }
 }
 
+impl<T: Debug> UserConstPtr<T> {
+    pub fn fmt_trace(&self) -> String {
+        format!("... @ {:?}", self.address())
+    }
+
+    pub fn fmt_trace_content(&self) -> String {
+        match self.get() {
+            Ok(content) => unsafe { format!("{:?} @ {:?}", *content, self.address()) },
+            Err(_) => {
+                format!("<access error> @ {:?}", self.address())
+            }
+        }
+    }
+}
+
 impl<T> UserConstPtr<T> {
     /// Get the pointer as `&[T]`, terminated by a null value, validating the
     /// memory region.
-    pub fn get_as_null_terminated(self) -> LinuxResult<&'static [T]>
+    pub fn get_as_null_terminated(&self) -> LinuxResult<&'static [T]>
     where
         T: Eq + Default,
     {
@@ -228,11 +282,53 @@ static_assertions::const_assert_eq!(size_of::<c_char>(), size_of::<u8>());
 
 impl UserConstPtr<c_char> {
     /// Get the pointer as `&str`, validating the memory region.
-    pub fn get_as_str(self) -> LinuxResult<&'static str> {
+    pub fn get_as_str(&self) -> LinuxResult<&'static str> {
         let slice = self.get_as_null_terminated()?;
         // SAFETY: c_char is u8
         let slice = unsafe { mem::transmute::<&[c_char], &[u8]>(slice) };
 
         str::from_utf8(slice).map_err(|_| LinuxError::EILSEQ)
+    }
+
+    pub fn fmt_trace_as_str(&self) -> String {
+        match self.get_as_str() {
+            Ok(content) => {
+                format!("{:?} @ {:?}", content, self.address())
+            }
+            Err(_) => {
+                format!("<access error> @ {:?}", self.address())
+            }
+        }
+    }
+}
+
+pub type UserInOutPtr<T> = UserPtr<T>;
+pub type UserOutPtr<T> = UserPtr<T>;
+pub type UserInPtr<T> = UserConstPtr<T>;
+
+pub trait TraceDisplay {
+    fn fmt_input(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result;
+    fn fmt_output(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result;
+}
+
+impl<T: Debug + 'static> TraceDisplay for UserInPtr<T> {
+    fn fmt_input(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_tuple("UserInPtr").field(&self.0).finish()
+    }
+
+    fn fmt_output(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_tuple("UserInPtr").field(&self.0).finish()
+    }
+}
+
+impl<T: Debug> Debug for UserPtr<T> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_tuple("UserPtr").field(&self.0).finish()
+    }
+}
+
+impl<T: Debug + 'static> Debug for UserConstPtr<T> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_tuple("UserConstPtr").field(&self.0).finish()
     }
 }
