@@ -1422,6 +1422,7 @@ dependencies = [
  "num_enum",
  "starry-core",
  "static_assertions",
+ "syscall-trace",
  "x86",
 ]
 
@@ -1495,6 +1496,14 @@ dependencies = [
  "proc-macro2",
  "quote",
  "unicode-ident",
+]
+
+[[package]]
+name = "syscall-trace"
+version = "0.1.0"
+dependencies = [
+ "quote",
+ "syn 2.0.100",
 ]
 
 [[package]]
