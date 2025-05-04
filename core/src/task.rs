@@ -1,21 +1,17 @@
 use core::{alloc::Layout, sync::atomic::Ordering};
 
+use crate::ctypes::TimeStat;
 use crate::process::{ProcessData, ThreadData};
-use crate::{ctypes::TimeStat, mm::copy_from_kernel};
-use alloc::{string::String, sync::Arc, vec::Vec};
-use arceos_posix_api::FD_TABLE;
-use axerrno::{AxError, AxResult};
-use axfs::{CURRENT_DIR, CURRENT_DIR_PATH};
+use alloc::{string::String, sync::Arc};
 use axhal::{
     arch::{TrapFrame, UspaceContext},
     time::{NANOS_PER_MICROS, NANOS_PER_SEC, monotonic_time_nanos},
 };
-use axmm::{AddrSpace, kernel_aspace};
+use axmm::kernel_aspace;
 use axns::{AxNamespace, AxNamespaceIf};
-use axtask::{AxTaskRef, TaskExtRef, TaskInner, current};
+use axtask::{TaskExtRef, TaskInner, current};
 use core::cell::RefCell;
 use memory_addr::VirtAddrRange;
-use spin::Mutex;
 use spin::Once;
 use undefined_process::process::Process;
 use undefined_process::thread::Thread;

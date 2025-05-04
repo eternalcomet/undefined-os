@@ -1,6 +1,4 @@
 use axerrno::LinuxResult;
-use axtask::TaskExtRef;
-use macro_rules_attribute::apply;
 use starry_core::task::current_process_data;
 use syscall_trace::syscall_trace;
 

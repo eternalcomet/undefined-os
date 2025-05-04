@@ -5,7 +5,6 @@ use crate::{
 use alloc::vec;
 use axerrno::{LinuxError, LinuxResult};
 use axhal::paging::MappingFlags;
-use axtask::{TaskExtRef, current};
 use macro_rules_attribute::apply;
 use memory_addr::{VirtAddr, VirtAddrRange};
 use starry_core::task::current_process_data;

@@ -1,6 +1,6 @@
 use crate::imp::fs::FsStatxTimestamp;
 use crate::imp::fs::status::{FileStatus, TimeSpec, sys_stat_impl};
-use crate::ptr::{PtrWrapper, UserConstPtr, UserInPtr, UserOutPtr, UserPtr};
+use crate::ptr::{PtrWrapper, UserInPtr, UserOutPtr};
 use alloc::format;
 use arceos_posix_api::AT_FDCWD;
 use axerrno::LinuxError;

@@ -1,15 +1,9 @@
 use core::ffi::CStr;
 
-use crate::task::{current_process, current_process_data};
 use alloc::{string::String, vec};
-use arceos_posix_api::sys_exit;
 use axerrno::{AxError, AxResult};
-use axhal::{
-    paging::MappingFlags,
-    trap::{PAGE_FAULT, register_trap_handler},
-};
+use axhal::paging::MappingFlags;
 use axmm::{AddrSpace, kernel_aspace};
-use axtask::TaskExtRef;
 use kernel_elf_parser::{AuxvEntry, ELFParser, app_stack_region};
 use memory_addr::{MemoryAddr, PAGE_SIZE_4K, VirtAddr};
 use xmas_elf::{ElfFile, program::SegmentData};
