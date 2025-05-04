@@ -101,7 +101,7 @@ dependencies = [
  "ctor_bare",
  "flatten_objects",
  "lazy_static",
- "spin",
+ "spin 0.9.8",
  "static_assertions",
 ]
 
@@ -217,7 +217,7 @@ source = "git+https://github.com/arceos-org/axdriver_crates.git?tag=v0.1.2#84eb2
 dependencies = [
  "axdriver_base",
  "log",
- "spin",
+ "spin 0.9.8",
 ]
 
 [[package]]
@@ -283,7 +283,7 @@ dependencies = [
  "lazyinit",
  "log",
  "lwext4_rust",
- "spin",
+ "spin 0.9.8",
 ]
 
 [[package]]
@@ -294,7 +294,7 @@ checksum = "d62eff0490e10cd2c2a74be2979820f0293fa5ebe00ee8bfd87b88ac7dd7d235"
 dependencies = [
  "axfs_vfs",
  "log",
- "spin",
+ "spin 0.9.8",
 ]
 
 [[package]]
@@ -305,7 +305,7 @@ checksum = "db46c6dae25a123579d5fdcdcc502d0dc2a8af86646106004c8a9181433271b1"
 dependencies = [
  "axfs_vfs",
  "log",
- "spin",
+ "spin 0.9.8",
 ]
 
 [[package]]
@@ -405,7 +405,7 @@ dependencies = [
  "lazyinit",
  "log",
  "smoltcp",
- "spin",
+ "spin 0.9.8",
 ]
 
 [[package]]
@@ -442,6 +442,7 @@ version = "0.1.0"
 dependencies = [
  "axtask",
  "kspin",
+ "lock_api",
 ]
 
 [[package]]
@@ -802,7 +803,7 @@ dependencies = [
  "atomic-polyfill",
  "hash32",
  "rustc_version",
- "spin",
+ "spin 0.9.8",
  "stable_deref_trait",
 ]
 
@@ -892,7 +893,7 @@ version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bbd2bcb4c963f2ddae06a2efc7e9f3591312473c50c6685e1f298068316e66fe"
 dependencies = [
- "spin",
+ "spin 0.9.8",
 ]
 
 [[package]]
@@ -953,6 +954,12 @@ name = "linux-raw-sys"
 version = "0.4.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d26c52dbd32dccf2d10cac7725f8eae5296885fb5703b261f7d0a0739ec807ab"
+
+[[package]]
+name = "linux-raw-sys"
+version = "0.9.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cd945864f07fe9f5371a27ad7b52a172b4b499999f1d97574c9fa68373937e12"
 
 [[package]]
 name = "lock_api"
@@ -1131,7 +1138,7 @@ checksum = "01e56c0c558952222967b592899f98765b48590e7bd7403bfd7075f73afc6ed6"
 dependencies = [
  "cfg-if",
  "percpu_macros",
- "spin",
+ "spin 0.9.8",
  "x86",
 ]
 
@@ -1309,7 +1316,7 @@ dependencies = [
  "bitflags 2.9.0",
  "errno",
  "libc",
- "linux-raw-sys",
+ "linux-raw-sys 0.4.15",
  "windows-sys",
 ]
 
@@ -1384,6 +1391,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "spin"
+version = "0.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d5fe4ccb98d9c292d56fec89a5e07da7fc4cf0dc11e156b41793132775d3e591"
+dependencies = [
+ "lock_api",
+]
+
+[[package]]
 name = "stable_deref_trait"
 version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1417,12 +1433,15 @@ dependencies = [
  "axsync",
  "axtask",
  "bitflags 2.9.0",
+ "linux-raw-sys 0.9.4",
  "macro_rules_attribute",
  "memory_addr",
  "num_enum",
+ "spin 0.10.0",
  "starry-core",
  "static_assertions",
  "syscall-trace",
+ "undefined-process",
  "x86",
 ]
 
@@ -1447,7 +1466,8 @@ dependencies = [
  "memory_addr",
  "numeric-enum-macro",
  "percpu",
- "spin",
+ "spin 0.10.0",
+ "undefined-process",
  "xmas-elf",
 ]
 
@@ -1564,6 +1584,13 @@ dependencies = [
  "indexmap",
  "toml_datetime",
  "winnow",
+]
+
+[[package]]
+name = "undefined-process"
+version = "0.1.0"
+dependencies = [
+ "spin 0.10.0",
 ]
 
 [[package]]

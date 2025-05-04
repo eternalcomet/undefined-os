@@ -21,6 +21,7 @@ fn main() {
         .filter(|&x| !x.is_empty());
 
     for testcase in testcases {
+        let testcase = testcase.trim();
         if testcase.is_empty() {
             continue;
         }

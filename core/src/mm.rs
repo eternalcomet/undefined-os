@@ -1,6 +1,8 @@
 use core::ffi::CStr;
 
+use crate::task::{current_process, current_process_data};
 use alloc::{string::String, vec};
+use arceos_posix_api::sys_exit;
 use axerrno::{AxError, AxResult};
 use axhal::{
     paging::MappingFlags,
@@ -195,9 +197,8 @@ fn handle_page_fault(vaddr: VirtAddr, access_flags: MappingFlags, is_user: bool)
         return false;
     }
 
-    if !axtask::current()
-        .task_ext()
-        .aspace
+    if !current_process_data()
+        .addr_space
         .lock()
         .handle_page_fault(vaddr, access_flags)
     {
@@ -206,6 +207,8 @@ fn handle_page_fault(vaddr: VirtAddr, access_flags: MappingFlags, is_user: bool)
             axtask::current().id_name(),
             vaddr
         );
+        // TODO: correct exit code and signal
+
         axtask::exit(-1);
     }
     true

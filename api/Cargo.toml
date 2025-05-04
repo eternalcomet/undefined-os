@@ -18,9 +18,11 @@ arceos_posix_api.workspace = true
 axerrno.workspace = true
 bitflags.workspace = true
 memory_addr.workspace = true
+linux-raw-sys.workspace = true
 
 starry-core.workspace = true
 syscall-trace.workspace = true
+undefined-process.workspace = true
 
 macro_rules_attribute = "0.2"
 num_enum = { version = "0.7", default-features = false }

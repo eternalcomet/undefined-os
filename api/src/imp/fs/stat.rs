@@ -2,7 +2,7 @@ use axerrno::LinuxResult;
 use core::ffi::c_char;
 use macro_rules_attribute::apply;
 
-use crate::status::TimeSpec;
+use crate::imp::fs::status::TimeSpec;
 use crate::{
     ptr::{PtrWrapper, UserConstPtr, UserPtr},
     syscall_instrument,
@@ -172,15 +172,17 @@ pub struct FsId {
     pub val: [i32; 2],
 }
 
-pub enum FsType {
-    EXT4_SUPER_MAGIC = 0xEF53,
+pub struct FsType;
+
+impl FsType {
+    const EXT4_SUPER_MAGIC: u32 = 0xEF53;
 }
 
 // TODO: [dummy] return dummy values
 #[apply(syscall_instrument)]
 pub fn sys_statfs(path: UserConstPtr<c_char>, buf: UserPtr<StatFs>) -> LinuxResult<isize> {
     let path = path.get_as_str()?;
-    let path = arceos_posix_api::handle_file_path(-1, Some(path.as_ptr() as _), false)?;
+    let _ = arceos_posix_api::handle_file_path(-1, Some(path.as_ptr() as _), false)?;
 
     // dummy data
     let stat_fs = StatFs {

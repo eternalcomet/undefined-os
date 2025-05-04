@@ -1,4 +1,4 @@
-use crate::Kstat;
+use crate::imp::fs::Kstat;
 use crate::ptr::{PtrWrapper, UserConstPtr, UserPtr};
 use arceos_posix_api::{self as api, ctypes::timeval};
 use axerrno::LinuxResult;

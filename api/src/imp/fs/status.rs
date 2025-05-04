@@ -1,6 +1,6 @@
 use crate::imp::fs::fs::open_file_like;
-use crate::path::resolve_path_with_parent;
-use arceos_posix_api::{FileLike, ctypes};
+use crate::imp::fs::path::resolve_path_with_parent;
+use arceos_posix_api::ctypes;
 use axerrno::LinuxResult;
 
 /// File status

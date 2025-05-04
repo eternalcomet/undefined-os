@@ -2,11 +2,11 @@ use alloc::format;
 use alloc::string::String;
 use axerrno::{LinuxError, LinuxResult};
 use axhal::paging::MappingFlags;
-use axtask::{TaskExtRef, current};
 use core::fmt::Debug;
 use core::{alloc::Layout, ffi::c_char, mem, slice, str};
 use memory_addr::{MemoryAddr, PAGE_SIZE_4K, VirtAddr, VirtAddrRange};
 use starry_core::mm::access_user_memory;
+use starry_core::task::current_process_data;
 
 fn check_region(start: VirtAddr, layout: Layout, access_flags: MappingFlags) -> LinuxResult<()> {
     let align = layout.align();
@@ -14,8 +14,8 @@ fn check_region(start: VirtAddr, layout: Layout, access_flags: MappingFlags) -> 
         return Err(LinuxError::EFAULT);
     }
 
-    let task = current();
-    let mut aspace = task.task_ext().aspace.lock();
+    let task = current_process_data();
+    let mut aspace = task.addr_space.lock();
 
     if !aspace.check_region_access(
         VirtAddrRange::from_start_size(start, layout.size()),
@@ -60,8 +60,8 @@ fn check_null_terminated<T: Eq + Default>(
                 // TODO: this is inefficient, but we have to do this instead of
                 // querying the page table since the page might has not been
                 // allocated yet.
-                let task = current();
-                let aspace = task.task_ext().aspace.lock();
+                let task = current_process_data();
+                let aspace = task.addr_space.lock();
                 if !aspace.check_region_access(
                     VirtAddrRange::from_start_size(page, PAGE_SIZE_4K),
                     access_flags,
@@ -152,6 +152,7 @@ pub trait PtrWrapper<T>: Sized {
 ///
 /// See [`PtrWrapper`] for more details.
 #[repr(transparent)]
+#[derive(Clone)]
 pub struct UserPtr<T>(*mut T);
 
 impl<T> From<usize> for UserPtr<T> {
@@ -228,6 +229,7 @@ impl<T: Debug> UserPtr<T> {
 ///
 /// See [`PtrWrapper`] for more details.
 #[repr(transparent)]
+#[derive(Clone)]
 pub struct UserConstPtr<T>(*const T);
 
 impl<T> From<usize> for UserConstPtr<T> {
