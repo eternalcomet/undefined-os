@@ -13,6 +13,7 @@ use starry_api::interface::task::*;
 use starry_api::*;
 use starry_core::task::{time_stat_from_kernel_to_user, time_stat_from_user_to_kernel};
 use syscalls::Sysno;
+use starry_api::interface::fs::io::{sys_ftruncate, sys_truncate};
 
 #[register_trap_handler(SYSCALL)]
 fn handle_syscall(tf: &mut TrapFrame, syscall_num: usize) -> isize {
@@ -192,6 +193,12 @@ fn handle_syscall(tf: &mut TrapFrame, syscall_num: usize) -> isize {
         Sysno::faccessat => stub_bypass(syscall_num),
         Sysno::kill => stub_bypass(syscall_num),
         Sysno::sysinfo => stub_unimplemented(syscall_num),
+        Sysno::sync => stub_bypass(syscall_num),
+        Sysno::fsync => stub_bypass(syscall_num),
+        Sysno::truncate => sys_truncate(tf.arg0().into(), tf.arg1() as _),
+        Sysno::ftruncate => sys_ftruncate(tf.arg0() as _, tf.arg1() as _),
+        Sysno::sched_getaffinity => stub_unimplemented(syscall_num),
+        Sysno::sched_setaffinity => stub_unimplemented(syscall_num),
         _ => stub_kill(syscall_num),
     };
     let ans = result.unwrap_or_else(|err| -err.code() as _);
