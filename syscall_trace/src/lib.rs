@@ -98,7 +98,7 @@ pub fn syscall_trace(_attr: TokenStream, item: TokenStream) -> TokenStream {
 
     let fn_body = &function.block;
     function.block = syn::parse2(quote! {{
-        debug!(#format_pattern_in, #( #arg_patterns_in ), *);
+        debug!(#format_pattern_in #(, #arg_patterns_in)*);
 
         let __result = (|| {
             #fn_body
@@ -114,7 +114,7 @@ pub fn syscall_trace(_attr: TokenStream, item: TokenStream) -> TokenStream {
                 format!("{:?}", error)
             }
         };
-        debug!(#format_pattern_out, #( #arg_patterns_out ), *, __linux_result);
+        debug!(#format_pattern_out #(, #arg_patterns_out)*, __linux_result);
         __result
     }})
     .unwrap();
