@@ -225,5 +225,5 @@ fn stub_kill(syscall_num: usize) -> Result<isize, LinuxError> {
         "Unimplemented syscall: {:?}, killed",
         Sysno::from(syscall_num as u32)
     );
-    axtask::exit(LinuxError::ENOSYS as _)
+    sys_exit(0)
 }

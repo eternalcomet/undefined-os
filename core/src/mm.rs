@@ -187,29 +187,7 @@ pub fn access_user_memory<R>(f: impl FnOnce() -> R) -> R {
     })
 }
 
-#[register_trap_handler(PAGE_FAULT)]
-fn handle_page_fault(vaddr: VirtAddr, access_flags: MappingFlags, is_user: bool) -> bool {
-    warn!(
-        "Page fault at {:#x}, access_flags: {:#x?}",
-        vaddr, access_flags
-    );
-    if !is_user && !ACCESSING_USER_MEM.read_current() {
-        return false;
-    }
-
-    if !current_process_data()
-        .addr_space
-        .lock()
-        .handle_page_fault(vaddr, access_flags)
-    {
-        warn!(
-            "{}: segmentation fault at {:#x}, exit!",
-            axtask::current().id_name(),
-            vaddr
-        );
-        // TODO: correct exit code and signal
-
-        axtask::exit(-1);
-    }
-    true
+/// Check if the current thread is accessing user memory.
+pub fn is_accessing_user_memory() -> bool {
+    ACCESSING_USER_MEM.read_current()
 }

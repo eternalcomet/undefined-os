@@ -6,6 +6,7 @@ extern crate alloc;
 #[macro_use]
 extern crate axlog;
 
+mod mm;
 mod syscall;
 
 use alloc::string::{String, ToString};
