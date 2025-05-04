@@ -1,9 +1,10 @@
 use alloc::string::String;
 use alloc::sync::Arc;
 use alloc::vec::Vec;
-use axmm::AddrSpace;
+use axmm::{AddrSpace, kernel_aspace};
 use axns::AxNamespace;
 use core::sync::atomic::{AtomicUsize, Ordering};
+use memory_addr::VirtAddrRange;
 use spin::Mutex;
 
 pub struct ProcessData {
@@ -47,6 +48,19 @@ impl ProcessData {
 
     pub fn set_heap_top(&self, top: usize) {
         self.heap_top.store(top, Ordering::Release)
+    }
+}
+
+impl Drop for ProcessData {
+    fn drop(&mut self) {
+        // TODO: prevent memory leak
+        if !cfg!(target_arch = "aarch64") && !cfg!(target_arch = "loongarch64") {
+            // See [`crate::new_user_aspace`]
+            let kernel = kernel_aspace().lock();
+            self.addr_space
+                .lock()
+                .clear_mappings(VirtAddrRange::from_start_size(kernel.base(), kernel.size()));
+        }
     }
 }
 
