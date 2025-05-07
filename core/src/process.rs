@@ -1,8 +1,10 @@
+use alloc::collections::BTreeMap;
 use alloc::string::String;
 use alloc::sync::Arc;
 use alloc::vec::Vec;
 use axmm::{AddrSpace, kernel_aspace};
 use axns::AxNamespace;
+use axtask::WaitQueue;
 use core::sync::atomic::{AtomicUsize, Ordering};
 use memory_addr::VirtAddrRange;
 use spin::Mutex;
@@ -20,7 +22,8 @@ pub struct ProcessData {
     heap_top: AtomicUsize,
     // TODO: resource limits
     // TODO: signals
-    // TODO: futex?
+    /// The futex table
+    pub futex_table: Mutex<BTreeMap<usize, Arc<WaitQueue>>>,
 }
 
 impl ProcessData {
@@ -30,7 +33,8 @@ impl ProcessData {
             addr_space,
             heap_bottom: AtomicUsize::new(axconfig::plat::USER_HEAP_BASE),
             heap_top: AtomicUsize::new(axconfig::plat::USER_HEAP_BASE),
-            // rlim: RwLock::default(), }
+            futex_table: Mutex::new(BTreeMap::new()),
+            // rlim: RwLock::default(),
         }
     }
 

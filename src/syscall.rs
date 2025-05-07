@@ -121,6 +121,14 @@ fn handle_syscall(tf: &mut TrapFrame, syscall_num: usize) -> isize {
         Sysno::set_tid_address => sys_set_tid_address(tf.arg0().into()),
         Sysno::clock_gettime => sys_clock_gettime(tf.arg0() as _, tf.arg1().into()),
         Sysno::exit_group => sys_exit_group(tf.arg0() as _),
+        Sysno::futex => sys_futex(
+            tf.arg0().into(),
+            tf.arg1() as _,
+            tf.arg2() as _,
+            tf.arg3().into(),
+            tf.arg4().into(),
+            tf.arg5() as _,
+        ),
         Sysno::getuid => sys_getuid(),
         Sysno::rt_sigprocmask => sys_rt_sigprocmask(
             tf.arg0() as _,
