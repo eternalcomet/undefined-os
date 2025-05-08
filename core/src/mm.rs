@@ -162,7 +162,11 @@ pub fn load_user_app(
 
     let user_sp = ustack_end - stack_data.len();
 
+    assert!(user_sp.is_aligned(16usize), "user sp is not aligned to 16");
+
     uspace.write(user_sp, stack_data.as_slice())?;
+
+    debug!("entry: {:#x?}  sp:: {:#x?}", entry, user_sp);
 
     Ok((entry, user_sp))
 }

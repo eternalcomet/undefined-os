@@ -856,8 +856,7 @@ dependencies = [
 [[package]]
 name = "kernel-elf-parser"
 version = "0.3.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "102999b07d80f34c1dca0d9e8f24adaa8028708842d39a3e5b98f4f085755627"
+source = "git+https://github.com/eternalcomet/kernel_elf_parser?branch=patch-1#0eea8bf79593e65bb5b07cec9d4f1107cee0a44d"
 dependencies = [
  "axerrno",
  "cfg-if",
