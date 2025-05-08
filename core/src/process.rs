@@ -1,13 +1,18 @@
+use crate::task::WaitQueueWrapper;
 use alloc::collections::BTreeMap;
 use alloc::string::String;
-use alloc::sync::Arc;
+use alloc::sync::{Arc, Weak};
 use alloc::vec::Vec;
 use axmm::{AddrSpace, kernel_aspace};
 use axns::AxNamespace;
+use axsignal::Signo;
+use axsignal::api::{ProcessSignalManager, SignalActions, ThreadSignalManager};
+use axsync::RawMutex;
 use axtask::WaitQueue;
 use core::sync::atomic::{AtomicUsize, Ordering};
 use memory_addr::VirtAddrRange;
 use spin::Mutex;
+use undefined_process::Pid;
 
 pub struct ProcessData {
     /// The command line arguments
@@ -69,6 +74,8 @@ impl Drop for ProcessData {
 }
 
 pub struct ThreadData {
+    /// only for TABLE management
+    tid: Pid,
     /// The process data
     pub process_data: Arc<ProcessData>,
     /// The resource namespace, used by FD_TABLE and CURRENT_DIR, etc.
@@ -85,12 +92,44 @@ pub struct ThreadData {
 }
 
 impl ThreadData {
-    pub fn new(process_data: Arc<ProcessData>) -> Self {
+    fn new(process_data: Arc<ProcessData>, tid: Pid) -> Self {
         Self {
-            process_data,
             namespace: AxNamespace::new_thread_local(),
             addr_clear_child_tid: AtomicUsize::new(0),
             addr_set_child_tid: AtomicUsize::new(0),
+            process_data,
+            tid,
         }
     }
+}
+
+impl Drop for ThreadData {
+    fn drop(&mut self) {
+        // remove form the thread data table
+        assert!(!THREAD_DATA_TABLE.lock().remove(&self.tid).is_none())
+    }
+}
+
+static THREAD_DATA_TABLE: Mutex<BTreeMap<Pid, Weak<ThreadData>>> = Mutex::new(BTreeMap::new());
+
+pub fn create_thread_data(process_data: Arc<ProcessData>, tid: Pid) -> Arc<ThreadData> {
+    let thread_data = Arc::new(ThreadData::new(process_data, tid));
+    let mut thread_data_table = THREAD_DATA_TABLE.lock();
+    thread_data_table.insert(tid, Arc::downgrade(&thread_data));
+    thread_data
+}
+
+pub fn get_thread_data(tid: Pid) -> Option<Arc<ThreadData>> {
+    let thread_data_table = THREAD_DATA_TABLE.lock();
+    let weak_thread_data = thread_data_table.get(&tid)?;
+    assert!(
+        weak_thread_data.strong_count() > 0,
+        "Thread data is not alive"
+    );
+    weak_thread_data.upgrade()
+}
+
+pub fn get_process_data(pid: Pid) -> Option<Arc<ProcessData>> {
+    let thread_data = get_thread_data(pid)?;
+    Some(thread_data.process_data.clone())
 }
