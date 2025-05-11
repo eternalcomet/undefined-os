@@ -31,8 +31,8 @@ pub fn sys_clone(
     clone_flags: c_ulong,
     new_sp: c_ulong,
     addr_parent_tid: UserOutPtr<c_int>,
-    tls: c_ulong,
     addr_child_tid: UserOutPtr<c_int>,
+    tls: c_ulong,
 ) -> LinuxResult<isize> {
     sys_clone_(
         clone_flags,
@@ -50,8 +50,8 @@ pub fn sys_clone(
     clone_flags: c_ulong,
     new_sp: c_ulong,
     addr_parent_tid: UserOutPtr<c_int>,
-    addr_child_tid: UserOutPtr<c_int>,
     tls: c_ulong,
+    addr_child_tid: UserOutPtr<c_int>,
 ) -> LinuxResult<isize> {
     sys_clone_(
         clone_flags,
