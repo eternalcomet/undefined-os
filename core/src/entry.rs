@@ -5,6 +5,7 @@ use alloc::{string::String, sync::Arc};
 use arceos_posix_api::{FD_TABLE, FilePath};
 use axfs::{CURRENT_DIR, CURRENT_DIR_PATH};
 use axhal::arch::UspaceContext;
+use axsignal::Signo;
 use spin::Mutex;
 use undefined_process::process::Process;
 
@@ -41,7 +42,12 @@ pub fn run_user_app(args: &[String], envs: &[String]) -> Option<i32> {
     let thread = process.get_main_thread().unwrap();
 
     // init task extended data
-    let process_data = ProcessData::new(args.to_vec(), Arc::new(Mutex::new(uspace)));
+    let process_data = ProcessData::new(
+        args.to_vec(),
+        Arc::new(Mutex::new(uspace)),
+        Arc::default(),
+        Some(Signo::SIGCHLD),
+    );
     let thread_data = create_thread_data(Arc::new(process_data), thread.get_tid());
 
     FD_TABLE

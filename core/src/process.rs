@@ -1,4 +1,4 @@
-use crate::task::WaitQueueWrapper;
+use crate::task::{WaitQueueWrapper, current_process};
 use alloc::collections::BTreeMap;
 use alloc::string::String;
 use alloc::sync::{Arc, Weak};
@@ -26,13 +26,23 @@ pub struct ProcessData {
     /// The user heap top
     heap_top: AtomicUsize,
     // TODO: resource limits
-    // TODO: signals
+    /// The child exit wait queue
+    pub child_exit_wq: WaitQueue,
+    /// The exit signal of the thread
+    pub exit_signal: Option<Signo>,
+    /// The process signal manager
+    pub signal: Arc<ProcessSignalManager<RawMutex, WaitQueueWrapper>>,
     /// The futex table
     pub futex_table: Mutex<BTreeMap<usize, Arc<WaitQueue>>>,
 }
 
 impl ProcessData {
-    pub fn new(command_line: Vec<String>, addr_space: Arc<Mutex<AddrSpace>>) -> Self {
+    pub fn new(
+        command_line: Vec<String>,
+        addr_space: Arc<Mutex<AddrSpace>>,
+        signal_actions: Arc<axsync::Mutex<SignalActions>>,
+        exit_signal: Option<Signo>,
+    ) -> Self {
         Self {
             command_line: Mutex::new(command_line),
             addr_space,
@@ -40,6 +50,12 @@ impl ProcessData {
             heap_top: AtomicUsize::new(axconfig::plat::USER_HEAP_BASE),
             futex_table: Mutex::new(BTreeMap::new()),
             // rlim: RwLock::default(),
+            child_exit_wq: WaitQueue::new(),
+            exit_signal,
+            signal: Arc::new(ProcessSignalManager::new(
+                signal_actions,
+                axconfig::plat::SIGNAL_TRAMPOLINE,
+            )),
         }
     }
 
@@ -57,6 +73,12 @@ impl ProcessData {
 
     pub fn set_heap_top(&self, top: usize) {
         self.heap_top.store(top, Ordering::Release)
+    }
+
+    /// Linux manual: A "clone" child is one which delivers no signal, or a
+    /// signal other than SIGCHLD to its parent upon termination.
+    pub fn is_clone_child(&self) -> bool {
+        self.exit_signal != Some(Signo::SIGCHLD)
     }
 }
 
@@ -88,7 +110,8 @@ pub struct ThreadData {
     pub addr_clear_child_tid: AtomicUsize,
     /// The set thread tid field
     pub addr_set_child_tid: AtomicUsize,
-    // TODO: signals
+    /// The thread-level signal manager
+    pub signal: ThreadSignalManager<RawMutex, WaitQueueWrapper>,
 }
 
 impl ThreadData {
@@ -97,6 +120,7 @@ impl ThreadData {
             namespace: AxNamespace::new_thread_local(),
             addr_clear_child_tid: AtomicUsize::new(0),
             addr_set_child_tid: AtomicUsize::new(0),
+            signal: ThreadSignalManager::new(process_data.signal.clone()),
             process_data,
             tid,
         }

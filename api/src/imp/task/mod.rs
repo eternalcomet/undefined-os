@@ -2,7 +2,8 @@ mod clone;
 mod execve;
 mod exit;
 mod futex;
-mod schedule;
+pub mod schedule;
+pub mod signal;
 mod thread;
 mod wait;
 

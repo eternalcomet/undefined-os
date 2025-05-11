@@ -11,7 +11,7 @@ use core::sync::atomic::Ordering;
 use linux_raw_sys::general::*;
 use spin::Mutex;
 use starry_core::mm::copy_from_kernel;
-use starry_core::process::{ProcessData, create_thread_data};
+use starry_core::process::{ProcessData, create_thread_data, get_process_data};
 use starry_core::task::{
     TaskExt, create_user_task, current_process, current_process_data, read_trapframe_from_kstack,
 };
@@ -84,6 +84,7 @@ pub fn sys_clone_impl(
     new_sp: usize,
     tls: usize,
     addr_child_tid: usize,
+    exit_signal: Option<Signo>,
 ) -> LinuxResult<isize> {
     // duplicate trap frame
     let trap_frame = read_trapframe_from_kstack(current().get_kernel_stack_top().unwrap());
@@ -147,13 +148,21 @@ pub fn sys_clone_impl(
         } else {
             current_process()
         };
-
+        // signals
+        let signal_actions = if clone_flags.contains(CloneFlags::SIGHAND) {
+            let parent_data = get_process_data(parent.get_pid()).unwrap();
+            parent_data.signal.actions.clone()
+        } else {
+            Arc::default()
+        };
         // fork new process
         let new_process = parent.fork();
         let new_thread = new_process.get_main_thread().unwrap();
         let process_data = ProcessData::new(
             current_process_data().command_line.lock().clone(),
             addr_space,
+            signal_actions,
+            exit_signal,
         );
         let thread_data = create_thread_data(Arc::new(process_data), new_thread.get_tid());
 

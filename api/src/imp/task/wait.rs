@@ -1,7 +1,6 @@
 use crate::ptr::{PtrWrapper, UserOutPtr};
 use alloc::{sync::Arc, vec::Vec};
 use axerrno::{LinuxError, LinuxResult};
-use axtask::yield_now;
 use bitflags::bitflags;
 use linux_raw_sys::general::{
     __WALL, __WCLONE, __WNOTHREAD, WCONTINUED, WEXITED, WNOHANG, WNOWAIT, WUNTRACED,
@@ -62,7 +61,7 @@ pub fn sys_wait4(pid: i32, exit_code_ptr: UserOutPtr<i32>, options: u32) -> Linu
     info!("sys_waitpid <= pid: {:?}, options: {:?}", pid, options);
 
     let process = current_process();
-    let proc_data = current_process_data();
+    let process_data = current_process_data();
 
     let pid = if pid == -1 {
         WaitPid::Any
@@ -99,9 +98,8 @@ pub fn sys_wait4(pid: i32, exit_code_ptr: UserOutPtr<i32>, options: u32) -> Linu
         } else if options.contains(WaitOptions::WNOHANG) {
             return Ok(0);
         } else {
-            // TODO: signal
-            // proc_data.child_exit_wq.wait();
-            yield_now();
+            // signal
+            process_data.child_exit_wq.wait();
         }
     }
 }
