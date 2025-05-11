@@ -73,9 +73,6 @@ pub fn sys_arch_prctl(code: i32, addr: UserPtr<u64>, tf: &mut TrapFrame) -> Linu
         // According to Linux implementation, SetFs & SetGs does not return
         // error at all
         ArchPrctlCode::SetFs => {
-            unsafe {
-                axhal::arch::write_thread_pointer(addr.address().as_usize());
-            }
             tf.set_tls(addr.address().as_usize());
             Ok(0)
         }
