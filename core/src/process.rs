@@ -1,5 +1,5 @@
-use crate::resource::{ResourceLimit, ResourceLimits};
-use crate::task::{WaitQueueWrapper, current_process};
+use crate::resource::ResourceLimits;
+use crate::task::WaitQueueWrapper;
 use alloc::collections::BTreeMap;
 use alloc::string::String;
 use alloc::sync::{Arc, Weak};

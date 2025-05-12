@@ -1,6 +1,6 @@
 use crate::ptr::UserInPtr;
 use crate::{
-    ptr::{PtrWrapper, UserConstPtr, UserPtr},
+    ptr::{PtrWrapper, UserPtr},
     syscall_instrument,
 };
 use axerrno::LinuxResult;
