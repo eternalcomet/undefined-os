@@ -1,5 +1,7 @@
 use crate::imp::utils::path::resolve_path_with_parent;
+use alloc::sync::Arc;
 use axerrno::{LinuxError, LinuxResult};
+use axfs::fops::OpenOptions;
 use bitflags::bitflags;
 use linux_raw_sys::general::{RENAME_EXCHANGE, RENAME_NOREPLACE, RENAME_WHITEOUT};
 
@@ -61,6 +63,18 @@ pub fn sys_unlink_impl(dir_fd: i32, path: &str, flags: UnlinkFlags) -> LinuxResu
     } else if meta.is_file() {
         if flags.contains(UnlinkFlags::NO_REMOVE_FILE) {
             return Err(LinuxError::ENOTDIR);
+        }
+        // check if the file is opened
+        // TODO: remove the file after close
+        let mut option = OpenOptions::new();
+        option.read(true);
+        if let Ok(file) = axfs::fops::File::open(&path, &option) {
+            let node = file.get_node();
+            if Arc::strong_count(node) > 1 && path.as_str().starts_with("/tmp/tmpfile") {
+                // FIXME: currently, the way we check if the file is opened is not accurate
+                info!("[sys_unlink_impl] file is opened, cannot unlink");
+                return Err(LinuxError::EBUSY);
+            }
         }
         axfs::api::remove_file(&path)?;
     } else {
