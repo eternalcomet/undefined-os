@@ -169,6 +169,12 @@ fn handle_syscall(tf: &mut TrapFrame, syscall_num: usize) -> isize {
             tf.arg2().into(),
             tf.arg3().into(),
         ),
+        Sysno::pwrite64 => sys_pwrite64(
+            tf.arg0() as _,
+            tf.arg1().into(),
+            tf.arg2() as _,
+            tf.arg3() as _,
+        ),
         Sysno::setrlimit => sys_setrlimit(tf.arg0() as _, tf.arg1().into()),
         Sysno::getrlimit => sys_getrlimit(tf.arg0() as _, tf.arg1().into()),
         Sysno::readv => sys_readv(tf.arg0() as _, tf.arg1().into(), tf.arg2() as _),
@@ -231,7 +237,7 @@ fn handle_syscall(tf: &mut TrapFrame, syscall_num: usize) -> isize {
         ),
         Sysno::sigaltstack => sys_sigaltstack(tf.arg0().into(), tf.arg1().into()),
         #[cfg(target_arch = "x86_64")]
-        Sysno::stat => interface::fs::sys_stat(tf.arg0().into(), tf.arg1().into()),
+        Sysno::stat => sys_stat(tf.arg0().into(), tf.arg1().into()),
         Sysno::statfs => sys_statfs(tf.arg0().into(), tf.arg1().into()),
         Sysno::tgkill => sys_tgkill(tf.arg0() as _, tf.arg1() as _, tf.arg2() as _),
         Sysno::tkill => sys_tkill(tf.arg0() as _, tf.arg1() as _),
