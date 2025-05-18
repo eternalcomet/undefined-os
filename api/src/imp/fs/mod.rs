@@ -5,6 +5,7 @@ mod io;
 mod mount;
 pub mod path;
 mod pipe;
+pub mod poll;
 mod stat;
 pub mod status;
 

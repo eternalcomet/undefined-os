@@ -5,13 +5,16 @@ use axhal::{
 };
 use starry_api::imp::fs::*;
 use starry_api::imp::mm::*;
+use starry_api::imp::net::socket::*;
 use starry_api::imp::sys::*;
 use starry_api::imp::task::signal::*;
 use starry_api::imp::task::*;
 use starry_api::imp::utils::*;
 use starry_api::interface::fs::io::*;
 use starry_api::interface::fs::path::*;
+use starry_api::interface::fs::poll::*;
 use starry_api::interface::fs::*;
+use starry_api::interface::mm::shm::*;
 use starry_api::interface::task::resource::*;
 use starry_api::interface::task::*;
 use starry_api::interface::user::identity::*;
@@ -169,6 +172,14 @@ fn handle_syscall(tf: &mut TrapFrame, syscall_num: usize) -> isize {
             tf.arg2().into(),
             tf.arg3().into(),
         ),
+        Sysno::pselect6 => sys_pselect(
+            tf.arg0() as _,
+            tf.arg1().into(),
+            tf.arg2().into(),
+            tf.arg3().into(),
+            tf.arg4().into(),
+            tf.arg5().into(),
+        ),
         Sysno::pwrite64 => sys_pwrite64(
             tf.arg0() as _,
             tf.arg1().into(),
@@ -228,6 +239,14 @@ fn handle_syscall(tf: &mut TrapFrame, syscall_num: usize) -> isize {
             tf.arg2() as _,
             tf.arg3().into(),
             tf.arg4() as _,
+        ),
+        #[cfg(target_arch = "x86_64")]
+        Sysno::select => sys_select(
+            tf.arg0() as _,
+            tf.arg1().into(),
+            tf.arg2().into(),
+            tf.arg3().into(),
+            tf.arg4().into(),
         ),
         Sysno::sendfile => sys_sendfile(
             tf.arg0() as _,
