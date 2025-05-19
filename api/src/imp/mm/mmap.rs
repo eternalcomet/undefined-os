@@ -1,3 +1,4 @@
+use crate::ptr::UserInPtr;
 use crate::{
     ptr::{PtrWrapper, UserPtr},
     syscall_instrument,
@@ -8,6 +9,7 @@ use axhal::paging::MappingFlags;
 use macro_rules_attribute::apply;
 use memory_addr::{VirtAddr, VirtAddrRange};
 use starry_core::task::current_process_data;
+use syscall_trace::syscall_trace;
 
 bitflags::bitflags! {
     /// permissions for sys_mmap
@@ -65,9 +67,9 @@ bitflags::bitflags! {
     }
 }
 
-#[apply(syscall_instrument)]
+#[syscall_trace]
 pub fn sys_mmap(
-    addr: UserPtr<usize>,
+    addr: UserInPtr<usize>,
     length: usize,
     prot: i32,
     flags: i32,
@@ -169,8 +171,8 @@ pub fn sys_munmap(addr: UserPtr<usize>, length: usize) -> LinuxResult<isize> {
     Ok(0)
 }
 
-#[apply(syscall_instrument)]
-pub fn sys_mprotect(addr: UserPtr<usize>, length: usize, prot: i32) -> LinuxResult<isize> {
+#[syscall_trace]
+pub fn sys_mprotect(addr: UserInPtr<usize>, length: usize, prot: i32) -> LinuxResult<isize> {
     // Safety: addr is used for mapping, and we won't directly access it.
     let addr = unsafe { addr.get_unchecked() };
 
