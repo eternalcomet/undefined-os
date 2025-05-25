@@ -187,6 +187,12 @@ fn handle_syscall(tf: &mut TrapFrame, syscall_num: usize) -> isize {
         ),
         Sysno::setrlimit => sys_setrlimit(tf.arg0() as _, tf.arg1().into()),
         Sysno::getrlimit => sys_getrlimit(tf.arg0() as _, tf.arg1().into()),
+        Sysno::readlinkat => sys_readlinkat(
+            tf.arg0() as _,
+            tf.arg1().into(),
+            tf.arg2().into(),
+            tf.arg3() as _,
+        ),
         Sysno::readv => sys_readv(tf.arg0() as _, tf.arg1().into(), tf.arg2() as _),
         #[cfg(target_arch = "x86_64")]
         Sysno::rename => sys_rename(tf.arg0().into(), tf.arg1().into()),

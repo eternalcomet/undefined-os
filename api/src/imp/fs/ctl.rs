@@ -182,10 +182,6 @@ pub fn sys_linkat(
         .map_err(|err| err.into())
 }
 
-pub fn sys_getcwd(buf: UserPtr<c_char>, size: usize) -> LinuxResult<isize> {
-    Ok(arceos_posix_api::sys_getcwd(buf.get_as_null_terminated()?.as_ptr() as _, size) as _)
-}
-
 #[syscall_trace]
 pub fn sys_utimensat(
     dir_fd: i32,

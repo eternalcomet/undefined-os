@@ -1,5 +1,6 @@
 use crate::imp::fs::path::*;
-use crate::ptr::UserInPtr;
+use crate::imp::utils::path::resolve_path_with_parent;
+use crate::ptr::{PtrWrapper, UserInPtr, UserOutPtr};
 use axerrno::{LinuxError, LinuxResult};
 use core::ffi::{c_char, c_int, c_uint};
 use linux_raw_sys::general::{AT_FDCWD, AT_REMOVEDIR};
@@ -93,4 +94,34 @@ pub fn sys_unlinkat(
 pub fn sys_rmdir(path_name: UserInPtr<c_char>) -> LinuxResult<isize> {
     let path_name = path_name.get_as_str()?;
     sys_unlink_impl(AT_FDCWD, path_name, UnlinkFlags::NO_REMOVE_FILE)
+}
+
+#[syscall_trace]
+pub fn sys_readlinkat(
+    dir_fd: c_int,
+    path_name: UserInPtr<c_char>,
+    buf: UserOutPtr<c_char>,
+    buf_len: usize,
+) -> LinuxResult<isize> {
+    let path_name = path_name.get_as_str()?;
+    let buf: UserOutPtr<u8> = buf.address().as_usize().into();
+    let _buf = buf.get_as_mut_slice(buf_len)?;
+    let path = resolve_path_with_parent(dir_fd, path_name)?;
+    warn!("[sys_readlinkat] path_name: {}, unimplemented!", path);
+    // Not a symlink, so return EINVAL
+    Err(LinuxError::EINVAL)
+}
+
+#[syscall_trace]
+pub fn sys_getcwd(buf: UserOutPtr<c_char>, size: usize) -> LinuxResult<isize> {
+    let buf: UserOutPtr<u8> = buf.address().as_usize().into();
+    let buf = buf.get_as_mut_slice(size)?;
+    let cwd = axfs::api::current_dir()?;
+    if cwd.len() < size {
+        buf[..cwd.len()].copy_from_slice(cwd.as_ref());
+        buf[cwd.len()] = 0;
+        Ok(cwd.len() as isize + 1)
+    } else {
+        Err(LinuxError::ERANGE)
+    }
 }
