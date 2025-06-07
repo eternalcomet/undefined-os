@@ -337,7 +337,7 @@ dependencies = [
  "page_table_multiarch",
  "percpu",
  "raw-cpuid 11.5.0",
-    "riscv 0.13.0",
+ "riscv 0.13.0",
  "sbi-rt",
  "static_assertions",
  "tock-registers 0.9.0",
@@ -374,7 +374,7 @@ dependencies = [
  "axerrno",
  "axhal",
  "kspin",
-    "lazy_static",
+ "lazy_static",
  "lazyinit",
  "log",
  "memory_addr",
@@ -440,7 +440,7 @@ dependencies = [
  "bitflags 2.9.1",
  "cfg-if",
  "derive_more",
-    "linux-raw-sys",
+ "linux-raw-sys",
  "lock_api",
  "log",
  "strum_macros",
@@ -1137,7 +1137,7 @@ dependencies = [
  "log",
  "memory_addr",
  "page_table_entry",
-    "riscv 0.12.1",
+ "riscv 0.12.1",
  "x86",
 ]
 
@@ -1276,7 +1276,7 @@ dependencies = [
  "critical-section",
  "embedded-hal",
  "paste",
-    "riscv-pac",
+ "riscv-pac",
 ]
 
 [[package]]
@@ -1285,9 +1285,9 @@ version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "afa3cdbeccae4359f6839a00e8b77e5736caa200ba216caf38d24e4c16e2b586"
 dependencies = [
-    "critical-section",
-    "embedded-hal",
-    "paste",
+ "critical-section",
+ "embedded-hal",
+ "paste",
  "riscv-macros",
  "riscv-pac",
 ]
@@ -1442,7 +1442,7 @@ dependencies = [
  "bit_field",
  "bitflags 2.9.1",
  "linkme",
-    "linux-raw-sys",
+ "linux-raw-sys",
  "macro_rules_attribute",
  "memory_addr",
  "num_enum",
@@ -1474,7 +1474,7 @@ dependencies = [
  "crate_interface",
  "kernel-elf-parser",
  "linkme",
-    "linux-raw-sys",
+ "linux-raw-sys",
  "memory_addr",
  "num_enum",
  "numeric-enum-macro",
