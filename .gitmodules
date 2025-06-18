@@ -1,0 +1,3 @@
+[submodule "modules/vfs"]
+	path = modules/vfs
+	url = https://github.com/undefined-os/vfs
