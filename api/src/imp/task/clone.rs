@@ -86,6 +86,7 @@ pub fn sys_clone_impl(
     addr_child_tid: usize,
     exit_signal: Option<Signo>,
 ) -> LinuxResult<isize> {
+    debug!("[sys_clone_impl] clone with flags: {clone_flags:?}, exit_signal: {exit_signal:?})");
     // duplicate trap frame
     let trap_frame = read_trapframe_from_kstack(current().get_kernel_stack_top().unwrap());
     let mut new_uctx = UspaceContext::from(&trap_frame);
@@ -136,7 +137,7 @@ pub fn sys_clone_impl(
             // clone the address space
             let addr_space = &current_process_data().addr_space;
             let mut addr_space = addr_space.lock();
-            let mut new_addr_space = addr_space.clone_or_err()?;
+            let mut new_addr_space = addr_space.try_clone()?;
             copy_from_kernel(&mut new_addr_space)?;
             Arc::new(Mutex::new(new_addr_space))
         };
