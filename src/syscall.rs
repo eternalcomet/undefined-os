@@ -18,6 +18,7 @@ use starry_api::interface::mm::shm::*;
 use starry_api::interface::task::resource::*;
 use starry_api::interface::task::*;
 use starry_api::interface::user::identity::*;
+use starry_api::interface::utility::random::*;
 use starry_core::task::{time_stat_from_kernel_to_user, time_stat_from_user_to_kernel};
 use syscalls::Sysno;
 
@@ -140,6 +141,7 @@ fn handle_syscall(tf: &mut TrapFrame, syscall_num: usize) -> isize {
         Sysno::getegid => sys_getegid(),
         Sysno::geteuid => sys_geteuid(),
         Sysno::getgid => sys_getgid(),
+        Sysno::getrandom => sys_getrandom(tf.arg0().into(), tf.arg1() as _, tf.arg2() as _),
         Sysno::gettid => sys_gettid(),
         Sysno::getuid => sys_getuid(),
         Sysno::kill => sys_kill(tf.arg0() as _, tf.arg1() as _),
@@ -309,7 +311,7 @@ fn handle_syscall(tf: &mut TrapFrame, syscall_num: usize) -> isize {
         Sysno::accept => sys_accept(tf.arg0() as _, tf.arg1() as _, tf.arg2() as _),
         Sysno::connect => sys_connect(tf.arg0() as _, tf.arg1() as _, tf.arg2() as _),
         #[cfg(target_arch = "x86_64")]
-        Sysno::access => stub_bypass(syscall_num),
+        Sysno::access => stub_bypass(syscall_num), // TODO: implement access
         Sysno::faccessat => stub_bypass(syscall_num),
         Sysno::sync => stub_bypass(syscall_num),
         Sysno::fsync => stub_bypass(syscall_num),
