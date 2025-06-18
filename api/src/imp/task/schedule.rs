@@ -1,7 +1,6 @@
+use crate::ptr::{PtrWrapper, UserConstPtr, UserPtr};
 use arceos_posix_api as api;
 use axerrno::LinuxResult;
-
-use crate::ptr::{PtrWrapper, UserConstPtr, UserPtr};
 
 pub fn sys_sched_yield() -> LinuxResult<isize> {
     Ok(api::sys_sched_yield() as _)
