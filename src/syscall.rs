@@ -10,6 +10,7 @@ use starry_api::imp::sys::*;
 use starry_api::imp::task::signal::*;
 use starry_api::imp::task::*;
 use starry_api::imp::utils::*;
+use starry_api::interface::fs::fd::*;
 use starry_api::interface::fs::io::*;
 use starry_api::interface::fs::path::*;
 use starry_api::interface::fs::poll::*;
@@ -47,7 +48,9 @@ fn handle_syscall(tf: &mut TrapFrame, syscall_num: usize) -> isize {
         Sysno::gettimeofday => sys_get_time_of_day(tf.arg0().into()),
         Sysno::getcwd => sys_getcwd(tf.arg0().into(), tf.arg1() as _),
         Sysno::dup => sys_dup(tf.arg0() as _),
-        Sysno::dup3 => sys_dup3(tf.arg0() as _, tf.arg1() as _),
+        #[cfg(target_arch = "x86_64")]
+        Sysno::dup2 => sys_dup2(tf.arg0() as _, tf.arg1() as _),
+        Sysno::dup3 => sys_dup3(tf.arg0() as _, tf.arg1() as _, tf.arg2() as _),
         Sysno::fcntl => sys_fcntl(tf.arg0() as _, tf.arg1() as _, tf.arg2() as _),
         #[cfg(any(target_arch = "riscv64", target_arch = "aarch64"))]
         Sysno::clone => sys_clone(
@@ -79,6 +82,8 @@ fn handle_syscall(tf: &mut TrapFrame, syscall_num: usize) -> isize {
         #[cfg(target_arch = "x86_64")]
         Sysno::open => sys_open(tf.arg0().into(), tf.arg1() as _, tf.arg2() as _),
         Sysno::getdents64 => sys_getdents64(tf.arg0() as _, tf.arg1().into(), tf.arg2() as _),
+        #[cfg(target_arch = "x86_64")]
+        Sysno::link => sys_link(tf.arg0().into(), tf.arg1().into()),
         Sysno::linkat => sys_linkat(
             tf.arg0() as _,
             tf.arg1().into(),
@@ -125,11 +130,10 @@ fn handle_syscall(tf: &mut TrapFrame, syscall_num: usize) -> isize {
         Sysno::arch_prctl => sys_arch_prctl(tf.arg0() as _, tf.arg1().into(), tf),
         Sysno::set_tid_address => sys_set_tid_address(tf.arg0().into()),
         Sysno::clock_gettime => sys_clock_gettime(tf.arg0() as _, tf.arg1().into()),
-        #[cfg(target_arch = "x86_64")]
-        Sysno::dup2 => sys_dup3(tf.arg0() as _, tf.arg1() as _),
         Sysno::exit_group => sys_exit_group(tf.arg0() as _),
         #[cfg(target_arch = "x86_64")]
         Sysno::fork => sys_fork(),
+        Sysno::fstatfs => sys_fstatfs(tf.arg0() as _, tf.arg1().into()),
         Sysno::futex => sys_futex(
             tf.arg0().into(),
             tf.arg1() as _,

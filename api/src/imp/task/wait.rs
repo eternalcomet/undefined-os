@@ -77,6 +77,11 @@ pub fn sys_wait4(pid: i32, exit_code_ptr: UserOutPtr<i32>, options: u32) -> Linu
         .get_children()
         .into_iter()
         .filter(|child| pid.apply(child))
+        // .filter(|child| {
+        //     options.contains(WaitOptions::WALL)
+        //         || (options.contains(WaitOptions::WCLONE)
+        //             == get_process_data(child.get_pid()).is_some_and(|x| x.is_clone_child()))
+        // })
         .collect::<Vec<_>>();
     if children.is_empty() {
         return Err(LinuxError::ECHILD);

@@ -1,14 +1,31 @@
-use crate::ptr::{PtrWrapper, UserConstPtr, UserPtr};
+use crate::core::time::TimeSpec;
+use crate::ptr::{PtrWrapper, UserConstPtr, UserInPtr, UserOutPtr, UserPtr};
+use crate::utils::task::{task_sleep, task_sleep_interruptable, task_yield};
 use arceos_posix_api as api;
-use axerrno::LinuxResult;
+use axerrno::{LinuxError, LinuxResult};
+use core::time::Duration;
+use syscall_trace::syscall_trace;
 
+#[syscall_trace]
 pub fn sys_sched_yield() -> LinuxResult<isize> {
-    Ok(api::sys_sched_yield() as _)
+    task_yield();
+    Ok(0)
 }
 
+#[syscall_trace]
 pub fn sys_nanosleep(
-    req: UserConstPtr<api::ctypes::timespec>,
-    rem: UserPtr<api::ctypes::timespec>,
+    requested: UserInPtr<TimeSpec>,
+    remain: UserOutPtr<TimeSpec>,
 ) -> LinuxResult<isize> {
-    unsafe { Ok(api::sys_nanosleep(req.get()?, rem.get()?) as _) }
+    let duration = requested.get_as_ref()?.to_duration()?;
+    let now = axhal::time::monotonic_time();
+    if let Err(LinuxError::EINTR) = task_sleep_interruptable(duration) {
+        if let Ok(remain) = remain.get_as_mut_ref() {
+            let after = axhal::time::monotonic_time();
+            let elapsed = after - now;
+            *remain = elapsed.into();
+        }
+        return Err(LinuxError::EINTR);
+    }
+    Ok(0)
 }

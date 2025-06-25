@@ -1,5 +1,5 @@
-use crate::ptr::PtrWrapper;
-use crate::ptr::UserInPtr;
+use crate::ptr::UserInOutPtr;
+use crate::ptr::{PtrWrapper, UserInPtr};
 use axerrno::LinuxResult;
 use core::sync::atomic::Ordering;
 use num_enum::TryFromPrimitive;
@@ -56,7 +56,13 @@ pub fn sys_set_tid_address(tid_ptd: UserInPtr<i32>) -> LinuxResult<isize> {
 }
 
 #[cfg(target_arch = "x86_64")]
-pub fn sys_arch_prctl(code: i32, addr: UserPtr<u64>, tf: &mut TrapFrame) -> LinuxResult<isize> {
+use axhal::arch::TrapFrame;
+#[cfg(target_arch = "x86_64")]
+pub fn sys_arch_prctl(
+    code: i32,
+    addr: UserInOutPtr<u64>,
+    tf: &mut TrapFrame,
+) -> LinuxResult<isize> {
     use axerrno::LinuxError;
     debug!(
         "arch_prctl: code = {:?}, addr = {:#x}",

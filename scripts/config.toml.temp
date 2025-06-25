@@ -3,7 +3,7 @@ axfeat = { path = "%AX_ROOT%/api/axfeat" }
 arceos_posix_api = { path = "%AX_ROOT%/api/arceos_posix_api" }
 
 axconfig = { path = "%AX_ROOT%/modules/axconfig" }
-axfs = { path = "%AX_ROOT%/modules/axfs" }
+axfs-ng = { path = "%AX_ROOT%/modules/axfs-ng" }
 axhal = { path = "%AX_ROOT%/modules/axhal" }
 axlog = { path = "%AX_ROOT%/modules/axlog" }
 axmm = { path = "%AX_ROOT%/modules/axmm" }
@@ -12,3 +12,8 @@ axsync = { path = "%AX_ROOT%/modules/axsync" }
 axtask = { path = "%AX_ROOT%/modules/axtask" }
 axalloc = { path = "%AX_ROOT%/modules/axalloc" }
 axnet = { path = "%AX_ROOT%/modules/axnet" }
+axdriver = { path = "%AX_ROOT%/modules/axdriver" }
+
+[patch.'https://github.com/undefined-os/vfs.git']
+undefined-vfs = { path = "modules/vfs" }
+
