@@ -1,4 +1,4 @@
-use axerrno::{LinuxError, LinuxResult};
+use axerrno::LinuxResult;
 use core::ffi::{c_char, c_void};
 
 use crate::ptr::UserConstPtr;
@@ -10,7 +10,6 @@ pub fn sys_mount(
     _flags: i32,
     _data: UserConstPtr<c_void>,
 ) -> LinuxResult<isize> {
-    Err(LinuxError::EPERM)
     // info!("sys_mount");
     // let source = source.get_as_null_terminated()?;
     // let target = target.get_as_null_terminated()?;
@@ -41,11 +40,10 @@ pub fn sys_mount(
     //     debug!("mount error");
     //     return Err(LinuxError::EPERM);
     // }
-    // Ok(0)
+    Ok(0)
 }
 
 pub fn sys_umount2(_target: UserConstPtr<c_char>, _flags: i32) -> LinuxResult<isize> {
-    Err(LinuxError::EPERM)
     // info!("sys_umount2");
     // let target = target.get_as_null_terminated()?;
     // let mount_path = handle_file_path(AT_FDCWD, Some(target.as_ptr() as _), true)?;
@@ -63,7 +61,7 @@ pub fn sys_umount2(_target: UserConstPtr<c_char>, _flags: i32) -> LinuxResult<is
     //     debug!("umount error");
     //     return Err(LinuxError::EPERM);
     // }
-    // Ok(0)
+    Ok(0)
 }
 
 // /// Mounted File System

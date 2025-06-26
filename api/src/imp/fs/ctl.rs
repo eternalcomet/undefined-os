@@ -1,7 +1,7 @@
 use crate::core::fs::dir::Directory;
 use crate::core::fs::fd::FileLike;
 use crate::core::time::TimeSpec;
-use crate::ptr::{PtrWrapper, UserInPtr, UserOutPtr, nullable};
+use crate::ptr::{UserInPtr, UserOutPtr, nullable};
 use crate::utils::path::{ResolveFlags, change_current_dir, resolve_path_at};
 use axerrno::{LinuxError, LinuxResult};
 use axhal::time::wall_time;
