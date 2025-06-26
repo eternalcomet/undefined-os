@@ -3,7 +3,7 @@ use axerrno::LinuxResult;
 use crate::ptr::{PtrWrapper, UserPtr};
 
 const OS_NAME: &str = "UndefinedOS";
-const OS_VERSION: &str = "1.0.0";
+const OS_VERSION: &str = "10.0.0";
 
 #[repr(C)]
 pub struct UtsName {

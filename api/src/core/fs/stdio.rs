@@ -179,11 +179,12 @@ impl FileLike for Stdin {
     }
 
     fn get_flags(&self) -> FileFlags {
-        todo!()
+        warn!("get flags for stdin is not implemented");
+        FileFlags::empty()
     }
 
     fn set_flags(&self, _flags: FileFlags) {
-        todo!()
+        warn!("set flags for stdin is not implemented");
     }
 
     fn into_any(self: Arc<Self>) -> Arc<dyn Any + Send + Sync> {
@@ -222,11 +223,12 @@ impl FileLike for Stdout {
     }
 
     fn get_flags(&self) -> FileFlags {
-        todo!()
+        warn!("get flags for stdout is not implemented");
+        FileFlags::empty()
     }
 
     fn set_flags(&self, _flags: FileFlags) {
-        todo!()
+        warn!("set flags for stdout is not implemented");
     }
 
     fn into_any(self: Arc<Self>) -> Arc<dyn Any + Send + Sync> {
