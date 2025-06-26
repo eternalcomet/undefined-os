@@ -45,7 +45,7 @@ fn handle_syscall(tf: &mut TrapFrame, syscall_num: usize) -> isize {
         Sysno::getpid => sys_getpid(),
         Sysno::getppid => sys_getppid(),
         Sysno::exit => sys_exit(tf.arg0() as _),
-        Sysno::gettimeofday => sys_get_time_of_day(tf.arg0().into()),
+        Sysno::gettimeofday => sys_get_time_of_day(tf.arg0().into(), tf.arg1().into()),
         Sysno::getcwd => sys_getcwd(tf.arg0().into(), tf.arg1() as _),
         Sysno::dup => sys_dup(tf.arg0() as _),
         #[cfg(target_arch = "x86_64")]
@@ -144,6 +144,8 @@ fn handle_syscall(tf: &mut TrapFrame, syscall_num: usize) -> isize {
         ),
         Sysno::getegid => sys_getegid(),
         Sysno::geteuid => sys_geteuid(),
+        Sysno::setpgid => sys_setpgid(tf.arg0() as _, tf.arg1() as _),
+        Sysno::getpgid => sys_getpgid(tf.arg0() as _),
         Sysno::getgid => sys_getgid(),
         Sysno::getrandom => sys_getrandom(tf.arg0().into(), tf.arg1() as _, tf.arg2() as _),
         Sysno::gettid => sys_gettid(),
@@ -327,6 +329,21 @@ fn handle_syscall(tf: &mut TrapFrame, syscall_num: usize) -> isize {
         Sysno::syslog => stub_bypass(syscall_num),
         Sysno::get_robust_list => stub_bypass(syscall_num),
         Sysno::set_robust_list => stub_bypass(syscall_num),
+        Sysno::setgid => stub_bypass(syscall_num),
+        Sysno::setuid => stub_bypass(syscall_num),
+        Sysno::umask => stub_bypass(syscall_num),
+        Sysno::get_mempolicy => stub_bypass(syscall_num),
+        Sysno::socketpair => stub_bypass(syscall_num),
+        Sysno::sched_getaffinity => {
+            sys_sched_getaffinity(tf.arg0() as _, tf.arg1() as _, tf.arg2().into())
+        },
+        Sysno::sched_setaffinity => {
+            sys_sched_setaffinity(tf.arg0() as _, tf.arg1() as _, tf.arg2().into())
+        },
+        Sysno::sched_setparam => stub_bypass(syscall_num),
+        Sysno::sched_getparam => stub_bypass(syscall_num),
+        Sysno::sched_setscheduler => stub_bypass(syscall_num),
+        Sysno::sched_getscheduler => stub_bypass(syscall_num),
         _ => stub_unimplemented(syscall_num),
     };
     let ans = result.unwrap_or_else(|err| -err.code() as _);

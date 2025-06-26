@@ -103,6 +103,9 @@ pub fn sys_dup3(old_fd: c_int, new_fd: c_int, flags: c_int) -> LinuxResult<isize
         // If old_fd equals new_fd, then dup3() fails with the error EINVAL.
         return Err(LinuxError::EINVAL);
     }
+    if flags != O_CLOEXEC as i32 && flags != 0 {
+        return Err(LinuxError::EINVAL);
+    }
     let _ = fd_remove(new_fd as _);
     // The caller can force the close-on-exec flag to be set for the new file descriptor
     // by specifying O_CLOEXEC in flags.
