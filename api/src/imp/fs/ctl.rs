@@ -1,7 +1,7 @@
 use crate::core::fs::dir::Directory;
 use crate::core::fs::fd::FileLike;
 use crate::core::time::TimeSpec;
-use crate::ptr::{UserInPtr, UserOutPtr};
+use crate::ptr::{PtrWrapper, UserInPtr, UserOutPtr, nullable};
 use crate::utils::path::{ResolveFlags, change_current_dir, resolve_path_at};
 use axerrno::{LinuxError, LinuxResult};
 use axhal::time::wall_time;
@@ -97,8 +97,7 @@ pub fn sys_utimensat(
             _ => Some(Duration::from(time)),
         }
     }
-
-    let path = path.get_as_str().unwrap_or("");
+    let path = nullable!(path.get_as_str())?;
     let resolve_flags = ResolveFlags::from_bits_truncate(flags);
     let resolve = resolve_path_at(dir_fd, path, resolve_flags)?;
     let location = resolve.location().ok_or(LinuxError::EINVAL)?;

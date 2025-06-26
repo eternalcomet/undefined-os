@@ -1,5 +1,5 @@
 use crate::imp::fs::path::*;
-use crate::ptr::{UserInPtr, UserOutPtr};
+use crate::ptr::{UserInPtr, UserOutPtr, nullable};
 use crate::utils::path::{ResolveFlags, get_fs_context, resolve_path_at};
 use axerrno::{LinuxError, LinuxResult};
 use core::cmp::min;
@@ -11,7 +11,7 @@ use syscall_trace::syscall_trace;
 pub fn sys_rename(old_path: UserInPtr<c_char>, new_path: UserInPtr<c_char>) -> LinuxResult<isize> {
     sys_rename_impl(
         AT_FDCWD,
-        old_path.get_as_str()?,
+        nullable!(old_path.get_as_str())?,
         AT_FDCWD,
         new_path.get_as_str()?,
         RenameFlags::empty(),
@@ -27,7 +27,7 @@ pub fn sys_renameat(
 ) -> LinuxResult<isize> {
     sys_rename_impl(
         old_dir_fd,
-        old_path.get_as_str()?,
+        nullable!(old_path.get_as_str())?,
         new_dir_fd,
         new_path.get_as_str()?,
         RenameFlags::empty(),
@@ -45,7 +45,7 @@ pub fn sys_renameat2(
     let flags = RenameFlags::from_bits(flags).ok_or(LinuxError::EINVAL)?;
     sys_rename_impl(
         old_dir_fd,
-        old_path.get_as_str()?,
+        nullable!(old_path.get_as_str())?,
         new_dir_fd,
         new_path.get_as_str()?,
         flags,
@@ -72,7 +72,7 @@ pub fn sys_mkdirat(
 
 #[syscall_trace]
 pub fn sys_unlink(path_name: UserInPtr<c_char>) -> LinuxResult<isize> {
-    let path_name = path_name.get_as_str()?;
+    let path_name = nullable!(path_name.get_as_str())?;
     sys_unlink_impl(AT_FDCWD, path_name, UnlinkFlags::NO_REMOVE_DIR)
 }
 
@@ -82,7 +82,7 @@ pub fn sys_unlinkat(
     path_name: UserInPtr<c_char>,
     flags: c_uint,
 ) -> LinuxResult<isize> {
-    let path_name = path_name.get_as_str()?;
+    let path_name = nullable!(path_name.get_as_str())?;
     let flags = if flags & AT_REMOVEDIR != 0 {
         UnlinkFlags::empty()
     } else {
@@ -95,7 +95,7 @@ pub fn sys_unlinkat(
 pub fn sys_link(old_path: UserInPtr<c_char>, new_path: UserInPtr<c_char>) -> LinuxResult<isize> {
     sys_link_impl(
         AT_FDCWD,
-        old_path.get_as_str()?,
+        nullable!(old_path.get_as_str())?,
         AT_FDCWD,
         new_path.get_as_str()?,
         0,
@@ -112,7 +112,7 @@ pub fn sys_linkat(
 ) -> LinuxResult<isize> {
     sys_link_impl(
         old_dir_fd,
-        old_path.get_as_str()?,
+        nullable!(old_path.get_as_str())?,
         new_dir_fd,
         new_path.get_as_str()?,
         flags,
@@ -120,8 +120,26 @@ pub fn sys_linkat(
 }
 
 #[syscall_trace]
+pub fn sys_symlink(target: UserInPtr<c_char>, link_path: UserInPtr<c_char>) -> LinuxResult<isize> {
+    let target = target.get_as_str()?;
+    let link_path = link_path.get_as_str()?;
+    sys_symlink_impl(target, AT_FDCWD, link_path)
+}
+
+#[syscall_trace]
+pub fn sys_symlinkat(
+    target: UserInPtr<c_char>,
+    new_dir_fd: c_int,
+    link_path: UserInPtr<c_char>,
+) -> LinuxResult<isize> {
+    let target = target.get_as_str()?;
+    let link_path = link_path.get_as_str()?;
+    sys_symlink_impl(target, new_dir_fd, link_path)
+}
+
+#[syscall_trace]
 pub fn sys_rmdir(path_name: UserInPtr<c_char>) -> LinuxResult<isize> {
-    let path_name = path_name.get_as_str()?;
+    let path_name = nullable!(path_name.get_as_str())?;
     sys_unlink_impl(AT_FDCWD, path_name, UnlinkFlags::NO_REMOVE_FILE)
 }
 
@@ -132,7 +150,7 @@ pub fn sys_readlinkat(
     buf: UserOutPtr<u8>,
     buf_len: usize,
 ) -> LinuxResult<isize> {
-    let path_name = path_name.get_as_str()?;
+    let path_name = nullable!(path_name.get_as_str())?;
     let buf = buf.get_as_mut_slice(buf_len)?;
     let resolve = resolve_path_at(dir_fd, path_name, ResolveFlags::NO_FOLLOW)?;
     let location = resolve.location().ok_or(LinuxError::EINVAL)?;

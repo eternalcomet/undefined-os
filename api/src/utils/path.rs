@@ -44,7 +44,9 @@ bitflags! {
     }
 }
 
-pub fn resolve_path_at_cwd(path: impl AsRef<Path>) -> LinuxResult<FsLocation> {
+pub fn resolve_path_at_cwd(path: Option<impl AsRef<Path>>) -> LinuxResult<FsLocation> {
+    let path = path.as_ref().map(AsRef::as_ref);
+    let path = path.unwrap_or("".as_ref());
     let context = get_fs_context();
     resolve_path(&context, path, &mut 0, true)
 }
@@ -52,16 +54,17 @@ pub fn resolve_path_at_cwd(path: impl AsRef<Path>) -> LinuxResult<FsLocation> {
 /// 为Linux的xxxat系统调用解析路径
 pub fn resolve_path_at(
     parent_fd: FileDescriptor,
-    path: impl AsRef<Path>,
+    path: Option<impl AsRef<Path>>,
     flags: ResolveFlags,
 ) -> LinuxResult<Resolve> {
-    let path = path.as_ref();
-    if path.is_empty() && flags.contains(ResolveFlags::EMPTY_PATH) {
+    let path = path.as_ref().map(AsRef::as_ref);
+    if path.is_none() || (path.unwrap().is_empty() && flags.contains(ResolveFlags::EMPTY_PATH)) {
         // 此时parent_fd对应的不一定是一个目录，可以是任何类型的文件描述符
         // 相当于对这个文件描述符进行操作
         let file_like = fd_lookup(parent_fd)?;
         return Ok(Resolve::FileLike(file_like));
     }
+    let path = path.unwrap();
     let context = get_fs_context();
     let no_follow = flags.contains(ResolveFlags::NO_FOLLOW);
     let location = if parent_fd == AT_FDCWD {

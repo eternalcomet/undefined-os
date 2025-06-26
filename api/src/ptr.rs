@@ -375,3 +375,14 @@ impl<T: Debug + 'static> Debug for UserConstPtr<T> {
         f.debug_tuple("UserConstPtr").field(&self.0).finish()
     }
 }
+
+macro_rules! nullable {
+    ($ptr:ident.$func:ident($($arg:expr),*)) => {
+        if $ptr.is_null() {
+            Ok(None)
+        } else {
+            Some($ptr.$func($($arg),*)).transpose()
+        }
+    };
+}
+pub(crate) use nullable;

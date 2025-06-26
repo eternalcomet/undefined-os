@@ -3,8 +3,8 @@ use crate::core::fs::file::File;
 use crate::imp::fs::{
     sys_pread_impl, sys_pwrite_impl, sys_read_impl, sys_truncate_impl, sys_write_impl,
 };
-use crate::ptr::{UserInOutPtr, UserInPtr, UserOutPtr};
-use crate::utils::path::resolve_path_at_cwd;
+use crate::ptr::{UserInOutPtr, UserInPtr, UserOutPtr, nullable};
+use crate::utils::path::{resolve_path_at, resolve_path_at_cwd};
 use alloc::vec;
 use axerrno::{LinuxError, LinuxResult};
 use axfs_ng::api::FileFlags;
@@ -16,7 +16,7 @@ use syscall_trace::syscall_trace;
 #[syscall_trace]
 pub fn sys_truncate(path: UserInPtr<c_char>, length: c_long) -> LinuxResult<isize> {
     // get params
-    let path = path.get_as_str()?;
+    let path = nullable!(path.get_as_str())?;
 
     // open file
     let location = resolve_path_at_cwd(path)?;

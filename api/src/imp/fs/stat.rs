@@ -8,7 +8,7 @@ use undefined_vfs::types::Metadata;
 
 pub fn sys_stat_impl(
     dir_fd: FileDescriptor,
-    path: &str,
+    path: Option<&str>,
     flags: ResolveFlags,
 ) -> LinuxResult<Metadata> {
     match resolve_path_at(dir_fd, path, flags)? {

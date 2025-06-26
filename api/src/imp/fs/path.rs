@@ -1,6 +1,8 @@
 use crate::core::fs::fd::{FileDescriptor, file_like_as};
 use crate::core::fs::file::File;
-use crate::utils::path::{Resolve, ResolveFlags, resolve_path_at, resolve_path_at_existed};
+use crate::utils::path::{
+    Resolve, ResolveFlags, get_fs_context, resolve_path_at, resolve_path_at_existed,
+};
 use axerrno::{LinuxError, LinuxResult};
 use bitflags::bitflags;
 use linux_raw_sys::general::{
@@ -19,7 +21,7 @@ bitflags! {
 
 pub fn sys_rename_impl(
     old_dir_fd: FileDescriptor,
-    old_path: &str,
+    old_path: Option<&str>,
     new_dir_fd: FileDescriptor,
     new_path: &str,
     flags: RenameFlags,
@@ -60,7 +62,7 @@ bitflags! {
 
 pub fn sys_unlink_impl(
     dir_fd: FileDescriptor,
-    path: &str,
+    path: Option<&str>,
     flags: UnlinkFlags,
 ) -> LinuxResult<isize> {
     // If the name referred to a symbolic link, the link is removed.
@@ -91,7 +93,7 @@ pub fn sys_unlink_impl(
 
 pub fn sys_link_impl(
     old_dir_fd: FileDescriptor,
-    old_path: &str,
+    old_path: Option<&str>,
     new_dir_fd: FileDescriptor,
     new_path: &str,
     flags: u32,
@@ -99,16 +101,37 @@ pub fn sys_link_impl(
     let flags = ResolveFlags::from_bits_truncate(flags);
     let old_path = resolve_path_at(old_dir_fd, old_path, flags)?;
     let (new_path, new_name) = resolve_path_at_existed(new_dir_fd, new_path)?;
+    let new_name = new_name.as_str();
 
-    let _location = match old_path {
+    if new_name.is_empty() {
+        return Err(LinuxError::EEXIST);
+    }
+
+    match old_path {
         Resolve::FileLike(file_like) => {
             let file = file_like_as::<File>(file_like).ok_or(LinuxError::EPERM)?;
-            new_path.link(new_name.as_ref(), file.inner().location())?;
+            new_path.link(new_name, file.inner().location())?;
         }
         Resolve::Location(location) => {
-            new_path.link(new_name.as_ref(), &location)?;
+            new_path.link(new_name, &location)?;
         }
     };
+    Ok(0)
+}
+
+pub fn sys_symlink_impl(
+    target: &str,
+    dir_fd: FileDescriptor,
+    link_path: &str,
+) -> LinuxResult<isize> {
+    let (location, name) = resolve_path_at_existed(dir_fd, link_path)?;
+    let name = name.as_str();
+    if name.is_empty() {
+        return Err(LinuxError::EEXIST);
+    }
+    let permission = get_fs_context().get_permissions(0o666);
+    let symlink = location.create(name, NodeType::Symlink, permission)?;
+    symlink.entry().as_file()?.set_symlink(target)?;
     Ok(0)
 }
 

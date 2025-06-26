@@ -113,7 +113,11 @@ pub fn load_user_app(
         return Err(LinuxError::EINVAL);
     }
     let context = FS_CONTEXT.lock();
-    let file_data = context.read(args[0].as_str())?;
+    let path = args[0].as_str();
+    let file_data = context.read(path).inspect_err(|_| {
+        error!("Load user app could not read file: {}", path);
+    })?;
+    drop(context);
     let elf = ElfFile::new(&file_data).map_err(|_| AxError::InvalidData)?;
 
     if let Some(interp) = elf
@@ -130,20 +134,6 @@ pub fn load_user_app(
             .to_str()
             .map_err(|_| AxError::InvalidData)?
             .to_string();
-
-        // if interp_path == "/lib/ld-linux-riscv64-lp64.so.1"
-        //     || interp_path == "/lib/ld-musl-riscv64.so.1"
-        //     || interp_path == "/lib64/ld-linux-loongarch-lp64d.so.1"
-        // // || interp_path == "/lib64/ld-linux-x86-64.so.2"
-        // // || interp_path == "/lib/ld-linux-aarch64.so.1"
-        // {
-        //     // TODO: Use soft link
-        //     interp_path = String::from("/musl/lib/libc.so");
-        // }
-        //
-        // // if interp_path == "/lib64/ld-linux-x86-64.so.2" {
-        //     interp_path = String::from("/glibc/lib/ld-linux-x86-64.so.2")
-        // }
 
         // Set the first argument to the path of the user app.
         let mut new_args = vec![interp_path];

@@ -5,6 +5,7 @@ use crate::core::fs::fd::{
     FdFlags, FileDescriptor, FileLike, fd_add, fd_add_at, fd_get_flags, fd_lookup, fd_remove,
     fd_set_flags,
 };
+use crate::interface::user::identity::{sys_getegid, sys_geteuid};
 use crate::utils::path::{fd_add_result, get_fs_context};
 use axerrno::{LinuxError, LinuxResult};
 use axfs_ng::api::{FileFlags, open};
@@ -49,13 +50,17 @@ pub fn sys_open_impl(
 ) -> LinuxResult<FileDescriptor> {
     let open_flags = to_file_flags(flags);
     let context = get_fs_context();
+    let uid = sys_geteuid()? as u32;
+    let gid = sys_getegid()? as u32;
+    let create_user = Some((uid, gid));
+
     // 这里不使用 `resolve_path_at` 是因为我们需要容忍可能不存在的文件
     let result = if parent_fd == AT_FDCWD {
-        open(path, &context, open_flags, Some(create_mode))?
+        open(path, &context, open_flags, Some(create_mode), create_user)?
     } else {
         let dir = Directory::from_fd(parent_fd)?;
         let context = context.with_current_dir(dir.inner().location().clone())?;
-        open(path, &context, open_flags, Some(create_mode))?
+        open(path, &context, open_flags, Some(create_mode), create_user)?
     };
     let fd_flags = if flags & O_CLOEXEC != 0 {
         FdFlags::CLOSE_ON_EXEC

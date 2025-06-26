@@ -2,7 +2,7 @@ use crate::core::fs::fd::fd_lookup;
 use crate::core::time::TimeSpec;
 use crate::imp::fs::stat::sys_stat_impl;
 use crate::imp::fs::{FsStatxTimestamp, UserStatFs, sys_statfs_impl};
-use crate::ptr::{UserInPtr, UserOutPtr};
+use crate::ptr::{UserInPtr, UserOutPtr, nullable};
 use crate::utils::path::{ResolveFlags, resolve_path_at_cwd};
 use alloc::format;
 use axerrno::LinuxError;
@@ -226,7 +226,7 @@ impl From<Metadata> for UserStatX {
 
 #[syscall_trace]
 pub fn sys_stat(path: UserInPtr<c_char>, stat_buf: UserOutPtr<UserStat>) -> LinuxResult<isize> {
-    let path = path.get_as_str()?;
+    let path = nullable!(path.get_as_str())?;
     let stat_buf = stat_buf.get_as_mut_ref()?;
     let file_status = sys_stat_impl(AT_FDCWD, path, ResolveFlags::empty())?;
     *stat_buf = file_status.into();
@@ -235,7 +235,7 @@ pub fn sys_stat(path: UserInPtr<c_char>, stat_buf: UserOutPtr<UserStat>) -> Linu
 
 #[syscall_trace]
 pub fn sys_lstat(path: UserInPtr<c_char>, stat_buf: UserOutPtr<UserStat>) -> LinuxResult<isize> {
-    let path = path.get_as_str()?;
+    let path = nullable!(path.get_as_str())?;
     let stat_buf = stat_buf.get_as_mut_ref()?;
     let file_status = sys_stat_impl(AT_FDCWD, path, ResolveFlags::NO_FOLLOW)?;
     *stat_buf = file_status.into();
@@ -245,7 +245,7 @@ pub fn sys_lstat(path: UserInPtr<c_char>, stat_buf: UserOutPtr<UserStat>) -> Lin
 #[syscall_trace]
 pub fn sys_fstat(fd: c_int, stat_buf: UserOutPtr<UserStat>) -> LinuxResult<isize> {
     let stat_buf = stat_buf.get_as_mut_ref()?;
-    let file_status = sys_stat_impl(fd, "", ResolveFlags::empty())?;
+    let file_status = sys_stat_impl(fd, None, ResolveFlags::empty())?;
     *stat_buf = file_status.into();
     Ok(0)
 }
@@ -257,7 +257,7 @@ pub fn sys_fstatat(
     stat_buf: UserOutPtr<UserStat>,
     flags: c_int,
 ) -> LinuxResult<isize> {
-    let path = path.get_as_str().unwrap_or("");
+    let path = nullable!(path.get_as_str())?;
     let stat_buf = stat_buf.get_as_mut_ref()?;
     let flags = ResolveFlags::from_bits_truncate(flags as _);
     let file_status = sys_stat_impl(dir_fd, path, flags)?;
@@ -273,7 +273,7 @@ pub fn sys_statx(
     _mask: c_uint,
     statx_buf: UserOutPtr<UserStatX>,
 ) -> LinuxResult<isize> {
-    let path = path.get_as_str().unwrap_or("");
+    let path = nullable!(path.get_as_str())?;
     let statx_buf = statx_buf.get_as_mut_ref()?;
     let flags = ResolveFlags::from_bits_truncate(flags as _);
     let file_status = sys_stat_impl(dir_fd, path, flags)?;
@@ -283,7 +283,7 @@ pub fn sys_statx(
 
 #[syscall_trace]
 pub fn sys_statfs(path: UserInPtr<c_char>, buf: UserOutPtr<UserStatFs>) -> LinuxResult<isize> {
-    let path = path.get_as_str()?;
+    let path = nullable!(path.get_as_str())?;
     let buf = buf.get_as_mut_ref()?;
     let location = resolve_path_at_cwd(path)?;
     let location = location.mountpoint().root_location();
