@@ -8,7 +8,7 @@ use alloc::format;
 use axerrno::LinuxError;
 use axerrno::LinuxResult;
 use core::ffi::{c_char, c_int, c_long, c_uint, c_ulong};
-use linux_raw_sys::general::{AT_EMPTY_PATH, AT_FDCWD, STATX_ALL, STATX_BASIC_STATS};
+use linux_raw_sys::general::{AT_FDCWD, STATX_BASIC_STATS};
 use syscall_trace::syscall_trace;
 use undefined_vfs::types::Metadata;
 

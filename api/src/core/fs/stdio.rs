@@ -182,7 +182,7 @@ impl FileLike for Stdin {
         todo!()
     }
 
-    fn set_flags(&self, flags: FileFlags) {
+    fn set_flags(&self, _flags: FileFlags) {
         todo!()
     }
 
@@ -225,7 +225,7 @@ impl FileLike for Stdout {
         todo!()
     }
 
-    fn set_flags(&self, flags: FileFlags) {
+    fn set_flags(&self, _flags: FileFlags) {
         todo!()
     }
 

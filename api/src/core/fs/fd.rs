@@ -4,7 +4,7 @@ use alloc::sync::Arc;
 use alloc::vec::Vec;
 use axerrno::{LinuxError, LinuxResult};
 use axfs_ng::api::FileFlags;
-use axio::{PollState, Read};
+use axio::{PollState};
 use axns::{ResArc, def_resource};
 use bitflags::bitflags;
 use core::any::Any;

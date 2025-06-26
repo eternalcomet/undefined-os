@@ -115,5 +115,5 @@ pub struct FsId {
 pub struct FsType;
 
 impl FsType {
-    const EXT4_SUPER_MAGIC: u32 = 0xEF53;
+    //const EXT4_SUPER_MAGIC: u32 = 0xEF53;
 }

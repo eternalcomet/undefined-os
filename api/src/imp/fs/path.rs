@@ -67,7 +67,7 @@ pub fn sys_unlink_impl(
     let path = resolve_path_at(dir_fd, path, ResolveFlags::NO_FOLLOW)?;
     // TODO: we do not support removing a socket, FIFO, or device
     let path = path.location().ok_or(LinuxError::EPERM)?;
-    let meta = path.metadata();
+    // let meta = path.metadata();
     if path.is_dir() {
         if flags.contains(UnlinkFlags::NO_REMOVE_DIR) {
             return Err(LinuxError::EISDIR);
@@ -100,7 +100,7 @@ pub fn sys_link_impl(
     let old_path = resolve_path_at(old_dir_fd, old_path, flags)?;
     let (new_path, new_name) = resolve_path_at_existed(new_dir_fd, new_path)?;
 
-    let location = match old_path {
+    let _location = match old_path {
         Resolve::FileLike(file_like) => {
             let file = file_like_as::<File>(file_like).ok_or(LinuxError::EPERM)?;
             new_path.link(new_name.as_ref(), file.inner().location())?;

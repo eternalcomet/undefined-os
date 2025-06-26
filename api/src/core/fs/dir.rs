@@ -49,7 +49,7 @@ impl FileLike for Directory {
         self.inner.lock().get_flags()
     }
 
-    fn set_flags(&self, flags: FileFlags) {
+    fn set_flags(&self, _flags: FileFlags) {
         todo!()
     }
 

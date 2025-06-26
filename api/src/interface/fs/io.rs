@@ -1,11 +1,10 @@
-use crate::core::fs::ApiFile;
 use crate::core::fs::fd::{FileLike, fd_lookup, file_like_as};
 use crate::core::fs::file::File;
 use crate::imp::fs::{
     sys_pread_impl, sys_pwrite_impl, sys_read_impl, sys_truncate_impl, sys_write_impl,
 };
-use crate::ptr::{UserInOutPtr, UserInPtr, UserOutPtr, UserPtr};
-use crate::utils::path::{resolve_path_at, resolve_path_at_cwd};
+use crate::ptr::{UserInOutPtr, UserInPtr, UserOutPtr};
+use crate::utils::path::resolve_path_at_cwd;
 use alloc::vec;
 use axerrno::{LinuxError, LinuxResult};
 use axfs_ng::api::FileFlags;

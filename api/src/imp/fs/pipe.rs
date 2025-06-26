@@ -1,10 +1,7 @@
 use alloc::sync::Arc;
-use core::ffi::c_int;
-
 use crate::core::fs::fd::{FdFlags, FileDescriptor, fd_add, fd_remove};
 use crate::core::fs::pipe::Pipe;
-use crate::ptr::{PtrWrapper, UserOutPtr, UserPtr};
-use arceos_posix_api as api;
+use crate::ptr::UserOutPtr;
 use axerrno::LinuxResult;
 use axfs_ng::api::FileFlags;
 use linux_raw_sys::general::O_CLOEXEC;

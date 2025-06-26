@@ -1,8 +1,7 @@
 use crate::imp::fs::path::*;
-use crate::ptr::{PtrWrapper, UserInPtr, UserOutPtr};
-use crate::utils::path::{Resolve, ResolveFlags, get_fs_context, resolve_path_at};
+use crate::ptr::{UserInPtr, UserOutPtr};
+use crate::utils::path::{ResolveFlags, get_fs_context, resolve_path_at};
 use axerrno::{LinuxError, LinuxResult};
-use axfs_vfs::VfsNodePerm;
 use core::cmp::min;
 use core::ffi::{c_char, c_int, c_uint};
 use linux_raw_sys::general::{AT_FDCWD, AT_REMOVEDIR};

@@ -7,10 +7,9 @@ use crate::core::fs::fd::{
 };
 use crate::utils::path::{fd_add_result, get_fs_context};
 use axerrno::{LinuxError, LinuxResult};
-use axfs_ng::api;
-use axfs_ng::api::{FileFlags, open, resolve_path};
+use axfs_ng::api::{FileFlags, open};
 use linux_raw_sys::general::{
-    AT_FDCWD, F_DUPFD, F_DUPFD_CLOEXEC, F_GETFD, F_GETFL, F_SETFD, F_SETFL, FD_CLOEXEC, O_CLOEXEC,
+    AT_FDCWD, F_DUPFD, F_DUPFD_CLOEXEC, F_GETFD, F_GETFL, F_SETFD, F_SETFL, O_CLOEXEC,
     O_RDONLY, O_RDWR, O_WRONLY,
 };
 use starry_core::resource::ResourceLimitType;

@@ -4,12 +4,11 @@ use crate::core::time::TimeSpec;
 use crate::ptr::{UserInPtr, UserOutPtr};
 use crate::utils::path::{ResolveFlags, change_current_dir, resolve_path_at};
 use axerrno::{LinuxError, LinuxResult};
-use axhal::time::{TimeValue, wall_time};
+use axhal::time::wall_time;
 use core::ffi::{c_char, c_void};
 use core::mem::offset_of;
 use core::time::Duration;
-use linux_raw_sys::general::{UTIME_NOW, UTIME_OMIT, linux_dirent64};
-use macro_rules_attribute::apply;
+use linux_raw_sys::general::{UTIME_NOW, UTIME_OMIT};
 use syscall_trace::syscall_trace;
 use undefined_vfs::types::{MetadataUpdate, NodeType};
 

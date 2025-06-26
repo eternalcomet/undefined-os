@@ -1,4 +1,3 @@
-use crate::ptr::UserInOutPtr;
 use crate::ptr::{PtrWrapper, UserInPtr};
 use axerrno::LinuxResult;
 use core::sync::atomic::Ordering;

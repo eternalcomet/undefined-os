@@ -1,9 +1,7 @@
 use crate::core::time::TimeSpec;
-use crate::ptr::{PtrWrapper, UserConstPtr, UserInPtr, UserOutPtr, UserPtr};
-use crate::utils::task::{task_sleep, task_sleep_interruptable, task_yield};
-use arceos_posix_api as api;
+use crate::ptr::{UserInPtr, UserOutPtr};
+use crate::utils::task::{task_sleep_interruptable, task_yield};
 use axerrno::{LinuxError, LinuxResult};
-use core::time::Duration;
 use syscall_trace::syscall_trace;
 
 #[syscall_trace]

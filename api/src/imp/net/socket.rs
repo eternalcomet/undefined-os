@@ -293,7 +293,7 @@ pub fn sys_socket(domain: c_int, socktype: c_int, protocol: c_int) -> LinuxResul
                 .map(|fd| fd as isize)
                 .map_err(|_| LinuxError::EMFILE)
         }
-        (AF_INET, SOCK_DGRAM, IPPROTO_UDP) | (AF_INET, SOCK_DGRAM, 0) => {
+        (AF_INET, _sock_dgram, IPPROTO_UDP) | (AF_INET, _sock_dgram, 0) => {
             Socket::Udp(Mutex::new(UdpSocket::new()))
                 .add_to_fd_table()
                 .map(|fd| fd as isize)
