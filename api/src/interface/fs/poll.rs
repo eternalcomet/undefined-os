@@ -238,8 +238,8 @@ fn sys_select_(
 
     // copy results back
     let mut count = 0;
-    for i in 0..entries.len() {
-        let entry = &entries[i];
+    for entry in entries {
+        let i = entry.fd as usize;
         // if read_fds_slice.get_bit(i) != 0 {
         let mut updated = false;
         if entry.results.contains(PollFlags::POLLIN) {
