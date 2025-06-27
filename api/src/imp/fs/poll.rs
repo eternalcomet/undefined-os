@@ -1,7 +1,7 @@
 use crate::core::fs::fd::fd_lookup;
 use crate::core::fs::pipe::Pipe;
+use crate::utils::task::task_yield_interruptable;
 use axerrno::LinuxResult;
-use axtask::yield_now;
 use bitflags::bitflags;
 
 bitflags! {
@@ -92,6 +92,7 @@ pub fn sys_poll_impl(fds: &mut [PollEntry], timeout: u64, block: bool) -> LinuxR
             // if any fd is updated, break
             break;
         }
+        task_yield_interruptable()?;
         if !block {
             if timeout == 0 {
                 // timeout == 0 means no wait
@@ -103,7 +104,6 @@ pub fn sys_poll_impl(fds: &mut [PollEntry], timeout: u64, block: bool) -> LinuxR
                 }
             }
         }
-        yield_now();
     }
     let mut updated_count = 0;
     for fd in fds.iter() {
