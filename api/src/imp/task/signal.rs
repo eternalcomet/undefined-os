@@ -21,7 +21,7 @@ use undefined_process::process::get_all_processes;
 use undefined_process::process_group::get_process_group;
 use undefined_process::thread::get_thread;
 
-fn check_signals(tf: &mut TrapFrame, restore_blocked: Option<SignalSet>) -> bool {
+pub fn check_signals(tf: &mut TrapFrame, restore_blocked: Option<SignalSet>) -> bool {
     let signal = &current_thread_data().signal;
     let Some((sig, os_action)) = signal.check_signals(tf, restore_blocked) else {
         return false;
