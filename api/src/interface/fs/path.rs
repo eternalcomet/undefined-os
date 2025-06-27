@@ -175,62 +175,46 @@ pub fn sys_getcwd(buf: UserOutPtr<u8>, size: usize) -> LinuxResult<isize> {
     }
 }
 
-// #[syscall_trace]
-// pub fn sys_faccessat(
-//     dir_fd: c_int,
-//     path_name: UserInPtr<c_char>,
-//     mode: c_uint,
-// ) -> LinuxResult<isize> {
-//     let path_name = path_name.get_as_str()?;
-//     let mode = AccessFlags::from_bits(mode).ok_or(LinuxError::EINVAL)?;
-//     let path = resolve_path_with_parent(dir_fd, path_name)?;
-//     let mut options = OpenOptions::new();
-//     options.read(true);
-//     let permissions = if let Ok(file) = fops::File::open(&path, &options) {
-//         file.get_attr()?.perm()
-//     } else if let Ok(dir) = fops::Directory::open_dir(&path, &options) {
-//         dir.get_attr()?.perm()
-//     } else {
-//         return Err(LinuxError::ENOENT);
-//     };
-//     let mut access = true;
-//     if mode.contains(AccessFlags::R_OK) {
-//         access &= permissions.owner_readable();
-//     }
-//     if mode.contains(AccessFlags::W_OK) {
-//         access &= permissions.owner_writable();
-//     }
-//     if mode.contains(AccessFlags::X_OK) {
-//         access &= permissions.owner_executable();
-//     }
-//     if access {
-//         Ok(0)
-//     } else {
-//         Err(LinuxError::EACCES)
-//     }
-// }
-//
-// #[syscall_trace]
-// pub fn sys_fchmodat(
-//     dir_fd: c_int,
-//     path_name: UserInPtr<c_char>,
-//     mode: c_uint,
-//     _flags: c_int,
-// ) -> LinuxResult<isize> {
-//     // TODO: Check permissions
-//     let path_name = path_name.get_as_str()?;
-//     let path = resolve_path_with_parent(dir_fd, path_name)?;
-//     let mut options = OpenOptions::new();
-//     options.read(true);
-//     let mut permissions = VfsNodePerm::from_bits_retain(mode as u16);
-//     // TODO: temporarily ignore the flags and just set the permissions
-//     permissions |= VfsNodePerm::OWNER_EXEC;
-//     if let Ok(file) = fops::File::open(&path, &options) {
-//         file.get_attr()?.set_perm(permissions);
-//     } else if let Ok(dir) = fops::Directory::open_dir(&path, &options) {
-//         dir.get_attr()?.set_perm(permissions);
-//     } else {
-//         return Err(LinuxError::ENOENT);
-//     };
-//     Ok(0)
-// }
+#[syscall_trace]
+pub fn sys_chmod(path_name: UserInPtr<c_char>, mode: c_uint) -> LinuxResult<isize> {
+    let path_name = path_name.get_as_str()?;
+    let mode = mode as u16;
+    sys_chmod_impl(AT_FDCWD, Some(path_name), mode, 0)
+}
+
+#[syscall_trace]
+pub fn sys_fchmod(fd: c_int, mode: c_uint) -> LinuxResult<isize> {
+    let mode = mode as u16;
+    sys_chmod_impl(fd, None, mode, 0)
+}
+
+#[syscall_trace]
+pub fn sys_fchmodat(
+    dir_fd: c_int,
+    path_name: UserInPtr<c_char>,
+    mode: c_uint,
+    flags: c_int,
+) -> LinuxResult<isize> {
+    let path_name = nullable!(path_name.get_as_str())?;
+    let mode = mode as u16;
+    sys_chmod_impl(dir_fd, path_name, mode, flags as _)
+}
+
+#[syscall_trace]
+pub fn sys_access(path_name: UserInPtr<c_char>, mode: c_uint) -> LinuxResult<isize> {
+    let path_name = nullable!(path_name.get_as_str())?;
+    let mode = mode as u16;
+    sys_access_impl(AT_FDCWD, path_name, mode, 0)
+}
+
+#[syscall_trace]
+pub fn sys_faccessat(
+    dir_fd: c_int,
+    path_name: UserInPtr<c_char>,
+    mode: c_uint,
+    flags: c_int,
+) -> LinuxResult<isize> {
+    let path_name = nullable!(path_name.get_as_str())?;
+    let mode = mode as u16;
+    sys_access_impl(dir_fd, path_name, mode, flags as _)
+}

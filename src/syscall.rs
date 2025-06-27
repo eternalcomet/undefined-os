@@ -20,12 +20,14 @@ use starry_api::interface::task::resource::*;
 use starry_api::interface::task::*;
 use starry_api::interface::user::identity::*;
 use starry_api::interface::utility::random::*;
+use starry_api::utils::task::set_trap_frame;
 use starry_core::task::{time_stat_from_kernel_to_user, time_stat_from_user_to_kernel};
 use syscalls::Sysno;
 
 #[register_trap_handler(SYSCALL)]
 fn handle_syscall(tf: &mut TrapFrame, syscall_num: usize) -> isize {
     info!("[syscall] <{:?}> begin", Sysno::from(syscall_num as u32));
+    set_trap_frame(tf);
     time_stat_from_user_to_kernel();
     let result: LinuxResult<isize> = match Sysno::from(syscall_num as u32) {
         Sysno::read => sys_read(tf.arg0() as _, tf.arg1().into(), tf.arg2() as _),
@@ -72,6 +74,8 @@ fn handle_syscall(tf: &mut TrapFrame, syscall_num: usize) -> isize {
         Sysno::pipe2 => sys_pipe2(tf.arg0().into(), tf.arg1() as _),
         Sysno::close => sys_close(tf.arg0() as _),
         Sysno::chdir => sys_chdir(tf.arg0().into()),
+        #[cfg(target_arch = "x86_64")]
+        Sysno::chmod => sys_chmod(tf.arg0().into(), tf.arg1() as _),
         Sysno::execve => sys_execve(tf, tf.arg0().into(), tf.arg1().into(), tf.arg2().into()),
         Sysno::openat => sys_openat(
             tf.arg0() as _,
@@ -129,8 +133,23 @@ fn handle_syscall(tf: &mut TrapFrame, syscall_num: usize) -> isize {
         #[cfg(target_arch = "x86_64")]
         Sysno::arch_prctl => sys_arch_prctl(tf.arg0() as _, tf.arg1().into(), tf),
         Sysno::set_tid_address => sys_set_tid_address(tf.arg0().into()),
+        #[cfg(target_arch = "x86_64")]
+        Sysno::access => sys_access(tf.arg0().into(), tf.arg1() as _),
         Sysno::clock_gettime => sys_clock_gettime(tf.arg0() as _, tf.arg1().into()),
         Sysno::exit_group => sys_exit_group(tf.arg0() as _),
+        Sysno::faccessat => sys_faccessat(
+            tf.arg0() as _,
+            tf.arg1().into(),
+            tf.arg2() as _,
+            tf.arg3() as _,
+        ),
+        Sysno::fchmod => sys_fchmod(tf.arg0() as _, tf.arg1() as _),
+        Sysno::fchmodat => sys_fchmodat(
+            tf.arg0() as _,
+            tf.arg1().into(),
+            tf.arg2() as _,
+            tf.arg3() as _,
+        ),
         #[cfg(target_arch = "x86_64")]
         Sysno::fork => sys_fork(),
         Sysno::fstatfs => sys_fstatfs(tf.arg0() as _, tf.arg1().into()),
@@ -336,10 +355,10 @@ fn handle_syscall(tf: &mut TrapFrame, syscall_num: usize) -> isize {
         Sysno::socketpair => stub_bypass(syscall_num),
         Sysno::sched_getaffinity => {
             sys_sched_getaffinity(tf.arg0() as _, tf.arg1() as _, tf.arg2().into())
-        },
+        }
         Sysno::sched_setaffinity => {
             sys_sched_setaffinity(tf.arg0() as _, tf.arg1() as _, tf.arg2().into())
-        },
+        }
         Sysno::sched_setparam => stub_bypass(syscall_num),
         Sysno::sched_getparam => stub_bypass(syscall_num),
         Sysno::sched_setscheduler => stub_bypass(syscall_num),

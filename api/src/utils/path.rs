@@ -9,6 +9,7 @@ use axsync::{MutexGuard, RawMutex};
 use bitflags::bitflags;
 use linux_raw_sys::general::{AT_EMPTY_PATH, AT_FDCWD, AT_NO_AUTOMOUNT, AT_SYMLINK_NOFOLLOW};
 use undefined_vfs::path::{Path, PathBuf};
+use undefined_vfs::types::Metadata;
 
 // TODO: 使用thread_data
 pub fn get_fs_context() -> MutexGuard<'static, FsContext<RawMutex>> {
@@ -32,6 +33,13 @@ impl Resolve {
         match self {
             Resolve::FileLike(file_like) => file_like.location(),
             Resolve::Location(location) => Some(location.clone()),
+        }
+    }
+
+    pub fn metadata(&self) -> LinuxResult<Metadata> {
+        match self {
+            Resolve::FileLike(file_like) => file_like.status(),
+            Resolve::Location(location) => location.metadata(),
         }
     }
 }

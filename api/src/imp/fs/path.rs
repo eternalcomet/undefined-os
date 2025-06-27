@@ -1,5 +1,6 @@
 use crate::core::fs::fd::{FileDescriptor, file_like_as};
 use crate::core::fs::file::File;
+use crate::interface::user::identity::{sys_getgid, sys_getuid};
 use crate::utils::path::{
     Resolve, ResolveFlags, get_fs_context, resolve_path_at, resolve_path_at_existed,
 };
@@ -8,7 +9,7 @@ use bitflags::bitflags;
 use linux_raw_sys::general::{
     R_OK, RENAME_EXCHANGE, RENAME_NOREPLACE, RENAME_WHITEOUT, W_OK, X_OK,
 };
-use undefined_vfs::types::{NodePermission, NodeType};
+use undefined_vfs::types::{MetadataUpdate, NodePermission, NodeType};
 
 bitflags! {
     #[derive(Debug)]
@@ -133,6 +134,59 @@ pub fn sys_symlink_impl(
     let symlink = location.create(name, NodeType::Symlink, permission)?;
     symlink.entry().as_file()?.set_symlink(target)?;
     Ok(0)
+}
+
+pub fn sys_chmod_impl(
+    dir_fd: FileDescriptor,
+    path: Option<&str>,
+    mode: u16,
+    flags: u32,
+) -> LinuxResult<isize> {
+    let flags = ResolveFlags::from_bits_truncate(flags);
+    let path = resolve_path_at(dir_fd, path, flags)?;
+    let location = path.location().ok_or(LinuxError::ENOTDIR)?;
+    let permission = NodePermission::from_bits(mode).ok_or(LinuxError::EINVAL)?;
+    location.update_metadata(MetadataUpdate {
+        mode: Some(permission),
+        ..Default::default()
+    })?;
+    Ok(0)
+}
+
+pub fn sys_access_impl(
+    dir_fd: FileDescriptor,
+    path: Option<&str>,
+    mode: u16,
+    flags: u32,
+) -> LinuxResult<isize> {
+    // The check is done using the calling process's real UID and GID,
+    // rather than the effective IDs as is done when actually attempting
+    // an operation (e.g., open) on the file.
+    let uid = sys_getuid()? as u32;
+    let gid = sys_getgid()? as u32;
+    let flags = ResolveFlags::from_bits_truncate(flags);
+    let path = resolve_path_at(dir_fd, path, flags)?;
+    let metadata = path.metadata()?;
+    let mut permission = metadata.mode.bits();
+    // permissions for "other" users
+    let mut mode_granted = permission & 0o7;
+    // permissions for "group" users
+    permission >>= 3;
+    if gid == metadata.gid {
+        mode_granted |= permission & 0o7;
+    }
+    // permissions for "owner" user
+    permission >>= 3;
+    if uid == metadata.uid {
+        mode_granted |= permission & 0o7;
+    }
+    // check if the requested mode is granted
+    let mode_requested = mode & 0o7;
+    if mode_requested & mode_granted != mode_requested {
+        Err(LinuxError::EACCES)
+    } else {
+        Ok(0)
+    }
 }
 
 bitflags! {
