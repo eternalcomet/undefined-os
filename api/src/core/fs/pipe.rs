@@ -16,7 +16,7 @@ enum RingBufferStatus {
     Normal,
 }
 
-const RING_BUFFER_SIZE: usize = 1024;
+const RING_BUFFER_SIZE: usize = 65536;
 
 pub struct PipeRingBuffer {
     arr: [u8; RING_BUFFER_SIZE],
