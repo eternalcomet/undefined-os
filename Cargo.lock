@@ -288,17 +288,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "axfs_vfs"
-version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2314ebe07a2fef7b1c1a7d15ab817941cd306ace651bb50024b5a8b3e8485359"
-dependencies = [
- "axerrno",
- "bitflags 2.9.1",
- "log",
-]
-
-[[package]]
 name = "axhal"
 version = "0.1.0"
 dependencies = [
@@ -1507,6 +1496,7 @@ dependencies = [
  "axtask",
  "inherit-methods-macro",
  "linkme",
+ "linux-raw-sys",
  "slab",
  "spin 0.10.0",
  "starry-api",
@@ -1525,7 +1515,6 @@ dependencies = [
  "axconfig",
  "axerrno",
  "axfs-ng",
- "axfs_vfs",
  "axhal",
  "axio",
  "axlog",
@@ -1543,6 +1532,7 @@ dependencies = [
  "macro_rules_attribute",
  "memory_addr",
  "num_enum",
+ "percpu",
  "rand_mt",
  "spin 0.10.0",
  "starry-core",
