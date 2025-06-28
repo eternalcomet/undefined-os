@@ -153,6 +153,29 @@ pub fn sys_chmod_impl(
     Ok(0)
 }
 
+pub fn sys_chown_impl(
+    dir_fd: FileDescriptor,
+    path: Option<&str>,
+    owner: Option<u32>,
+    group: Option<u32>,
+    flags: ResolveFlags,
+) -> LinuxResult<isize> {
+    let path = resolve_path_at(dir_fd, path, flags)?;
+    let location = path.location().ok_or(LinuxError::ENOTDIR)?;
+    let metadata = location.metadata()?;
+    let uid = owner.unwrap_or(metadata.uid);
+    let gid = group.unwrap_or(metadata.gid);
+    // TODO: check if the caller has permission to change the owner/group
+    // Only a privileged process (Linux: one with the CAP_CHOWN capability) may change the owner of a file.
+    // The owner of a file may change the group of the file to any group of which that owner is a member.
+    // A privileged process (Linux: with CAP_CHOWN) may change the group arbitrarily.
+    location.update_metadata(MetadataUpdate {
+        owner: Some((uid, gid)),
+        ..Default::default()
+    })?;
+    Ok(0)
+}
+
 pub fn sys_access_impl(
     dir_fd: FileDescriptor,
     path: Option<&str>,

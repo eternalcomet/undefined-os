@@ -76,6 +76,8 @@ fn handle_syscall(tf: &mut TrapFrame, syscall_num: usize) -> isize {
         Sysno::chdir => sys_chdir(tf.arg0().into()),
         #[cfg(target_arch = "x86_64")]
         Sysno::chmod => sys_chmod(tf.arg0().into(), tf.arg1() as _),
+        #[cfg(target_arch = "x86_64")]
+        Sysno::chown => sys_chown(tf.arg0().into(), tf.arg1() as _, tf.arg2() as _),
         Sysno::execve => sys_execve(tf, tf.arg0().into(), tf.arg1().into(), tf.arg2().into()),
         Sysno::openat => sys_openat(
             tf.arg0() as _,
@@ -150,6 +152,14 @@ fn handle_syscall(tf: &mut TrapFrame, syscall_num: usize) -> isize {
             tf.arg2() as _,
             tf.arg3() as _,
         ),
+        Sysno::fchown => sys_fchown(tf.arg0() as _, tf.arg1() as _, tf.arg2() as _),
+        Sysno::fchownat => sys_fchownat(
+            tf.arg0() as _,
+            tf.arg1().into(),
+            tf.arg2() as _,
+            tf.arg3() as _,
+            tf.arg4() as _,
+        ),
         #[cfg(target_arch = "x86_64")]
         Sysno::fork => sys_fork(),
         Sysno::fstatfs => sys_fstatfs(tf.arg0() as _, tf.arg1().into()),
@@ -173,6 +183,8 @@ fn handle_syscall(tf: &mut TrapFrame, syscall_num: usize) -> isize {
         Sysno::lseek => sys_lseek(tf.arg0() as _, tf.arg1() as _, tf.arg2() as _),
         #[cfg(target_arch = "x86_64")]
         Sysno::lstat => sys_lstat(tf.arg0().into(), tf.arg1().into()),
+        #[cfg(target_arch = "x86_64")]
+        Sysno::lchown => sys_lchown(tf.arg0().into(), tf.arg1() as _, tf.arg2() as _),
         #[cfg(target_arch = "x86_64")]
         Sysno::mkdir => sys_mkdir(tf.arg0().into(), tf.arg1() as _),
         Sysno::mkdirat => sys_mkdirat(tf.arg0() as _, tf.arg1().into(), tf.arg2() as _),

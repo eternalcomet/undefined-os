@@ -1,87 +1,83 @@
-# ============ init code for oscomp test ============
-# setup the environment
-alias busybox=/musl/busybox
-busybox mkdir -p /bin
-busybox ln -s /musl/busybox /bin/ls
-busybox ls -la /bin
-exit
-/musl/busybox cp /musl/busybox /bin/busybox
-# TODO: link busybox to /bin
-busybox cp /musl/busybox /bin/ls
-busybox mkdir -p /lib
-#busybox mkdir -p /lib64
-#busybox cp -v /glibc/lib/ld-linux-* /lib/
-# basic testcase on riscv64 requires "ld-linux-riscv64-lp64.so.1",
-# but we only have "ld-linux-riscv64-lp64d.so.1" in /glibc/lib
-busybox cp -v /musl/lib/libc.so /lib/ld-musl-riscv64-sf.so.1
+# ============ setup the environment ============
 
-# ============ test cases compiled with musl ============
-# setup musl libraries
-# TODO: use symlink instead of cp
-busybox cp -v /musl/lib/libc.so /lib/ld-musl-riscv64.so.1
-# busybox cp /musl/lib/libc.so /lib/ld-musl-x86_64.so.1
-# busybox cp /musl/lib/libc.so /lib/ld-musl-loongarch-lp64d.so.1
-# busybox cp /musl/lib/libc.so /lib/ld-musl-aarch64.so.1
-busybox cp -v /musl/lib/*.so /lib/
-busybox cp /musl/lib/dlopen_dso.so /musl
-# busybox cp -r /lib/. /lib64/
-busybox ls -l /lib/
-# begin test
-/musl/entry-dynamic.exe argv
-exit
-/musl/libctest_testcode.sh
-exit
-
-# ============ init code for oscomp test ============
-# setup the environment
+# setup binaries
 /musl/busybox mkdir -p /bin
-/musl/busybox cp /musl/busybox /bin/busybox
-# TODO: link busybox to /bin
-busybox cp /musl/busybox /bin/ls
-busybox mkdir -p /lib
-busybox mkdir -p /lib64
-busybox cp -v /glibc/lib/ld-linux-* /lib/
-# basic testcase on riscv64 requires "ld-linux-riscv64-lp64.so.1",
-# but we only have "ld-linux-riscv64-lp64d.so.1" in /glibc/lib
-busybox cp -v /musl/lib/libc.so /lib/ld-linux-riscv64-lp64.so.1
+/musl/busybox --install -s /bin
+ln -v -s /musl/busybox /bin/busybox
 
-# ============ test cases compiled with musl ============
-# setup musl libraries
-# TODO: use symlink instead of cp
-busybox cp -v /musl/lib/libc.so /lib/ld-musl-riscv64.so.1
-/musl/busybox cp /musl/lib/libc.so /lib/ld-musl-riscv64-sf.so.1
-# busybox cp /musl/lib/libc.so /lib/ld-musl-x86_64.so.1
-# busybox cp /musl/lib/libc.so /lib/ld-musl-loongarch-lp64d.so.1
-# busybox cp /musl/lib/libc.so /lib/ld-musl-aarch64.so.1
-busybox cp -v /musl/lib/*.so /lib/
-busybox cp /musl/lib/dlopen_dso.so /musl
-# busybox cp -r /lib/. /lib64/
-busybox ls -l /lib/
-# begin test
-#/musl/basic_testcode.sh
-/musl/libctest_testcode.sh
-/musl/runtest.exe -w entry-dynamic.exe argv
-/musl/libc-bench
-#busybox find /usr -name "libtcc.a"
+# setup libraries
+mkdir -p /lib
+ln -v -s /glibc/lib/libc.so.6 /lib/
+ln -v -s /glibc/lib/libm.so.6 /lib/
+ln -v -s /musl/lib/* /lib/
+#ln -v -s /lib/libc.so.6 /lib/libc.so
+#ln -v -s /lib/libm.so.6 /lib/libm.so
+ln -v -s /musl/lib/libc.so /lib/ld-musl-loongarch-lp64d.so.1
+ln -v -s /glibc/lib/ld-linux-loongarch-lp64d.so.1 /lib/ld-linux-loongarch-lp64d.so.1
+ln -v -s /musl/lib/libc.so /lib/ld-musl-riscv64.so.1
+ln -v -s /musl/lib/libc.so /lib/ld-musl-riscv64-sf.so.1
+ln -v -s /glibc/lib/ld-linux-riscv64-lp64d.so.1 /lib/ld-linux-riscv64-lp64d.so.1
+rm -rf /lib64
+ln -v -s /lib /lib64
+mkdir -p /usr
+rm -rf /usr/lib64
+ln -v -s /lib /usr/lib64
+mkdir -p /ext
+rm -rf /var/tmp
+mkdir -p /var/
+ln -v -s /tmp /var/tmp
+
+# [[test]]
+echo "test ltp begin"
+mkdir -p /lib
+ln -v -s /musl/lib/libc.so /lib/ld-musl-riscv64.so.1
+cd /musl/ltp/testcases/bin
+
+ltp_testlist="getpid01 getpid02"
+echo "#### OS COMP TEST GROUP START ltp-musl ####"
+
+# 定义目标目录
+target_dir="ltp/"
+
+# 遍历目录下的所有文件
+for file in $ltp_testlist; do
+  # 跳过目录，仅处理文件
+  if [ -f "$file" ]; then
+    # 输出文件名
+    echo "RUN LTP CASE $file"
+
+    "./$file"
+    ret=$?
+
+    # 输出文件名和返回值
+    echo "FAIL LTP CASE $file : $ret"
+  fi
+done
+
+
+echo "#### OS COMP TEST GROUP END ltp-musl ####"
+#./ltp/getpid01
+sh -i
 exit
-
-# ============ init code for oscomp test ============
-# setup the environment
-/musl/busybox mkdir -p /bin
-/musl/busybox cp /musl/busybox /bin/busybox
-# TODO: link busybox to /bin
-busybox cp /musl/busybox /bin/ls
-busybox mkdir -p /lib
-busybox mkdir -p /lib64
-busybox cp -v /glibc/lib/ld-linux-* /lib/
-# basic testcase on riscv64 requires "ld-linux-riscv64-lp64.so.1",
-# but we only have "ld-linux-riscv64-lp64d.so.1" in /glibc/lib
-busybox cp /musl/lib/libc.so /lib/ld-linux-riscv64-lp64.so.1
+# [[test end]]
 
 # ============ test cases compiled with musl ============
-# setup musl libraries
-# TODO: use symlink instead of cp
-busybox cp /musl/lib/libc.so /lib/ld-musl-riscv64-sf.so.1
-#/musl/runtest.exe -w entry-dynamic.exe fscanf
-#/musl/libc-bench
-busybox find /usr -name "libtcc.a"
+cd /musl || exit 1
+./basic_testcode.sh
+./lua_testcode.sh
+./libctest_testcode.sh
+./busybox_testcode.sh
+./libcbench_testcode.sh
+#./iozone_testcode.sh
+cp iozone iozone_testcode.sh busybox /tmp
+cd /tmp && ./iozone_testcode.sh
+
+# ============ test cases compiled with glibc ============
+cd /glibc || exit 1
+./basic_testcode.sh
+./lua_testcode.sh
+./busybox_testcode.sh
+./libcbench_testcode.sh
+#./iozone_testcode.sh
+cp iozone iozone_testcode.sh busybox /tmp
+cd /tmp && ./iozone_testcode.sh

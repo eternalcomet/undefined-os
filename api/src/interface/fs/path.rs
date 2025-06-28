@@ -201,6 +201,56 @@ pub fn sys_fchmodat(
 }
 
 #[syscall_trace]
+pub fn sys_chown(path_name: UserInPtr<c_char>, owner: c_int, group: c_int) -> LinuxResult<isize> {
+    let path_name = path_name.get_as_str()?;
+    let owner = if owner == -1 { None } else { Some(owner as _) };
+    let group = if group == -1 { None } else { Some(group as _) };
+    sys_chown_impl(
+        AT_FDCWD,
+        Some(path_name),
+        owner,
+        group,
+        ResolveFlags::empty(),
+    )
+}
+
+#[syscall_trace]
+pub fn sys_fchown(fd: c_int, owner: c_int, group: c_int) -> LinuxResult<isize> {
+    let owner = if owner == -1 { None } else { Some(owner as _) };
+    let group = if group == -1 { None } else { Some(group as _) };
+    sys_chown_impl(fd, None, owner, group, ResolveFlags::empty())
+}
+
+#[syscall_trace]
+pub fn sys_lchown(path_name: UserInPtr<c_char>, owner: c_int, group: c_int) -> LinuxResult<isize> {
+    let path_name = path_name.get_as_str()?;
+    let owner = if owner == -1 { None } else { Some(owner as _) };
+    let group = if group == -1 { None } else { Some(group as _) };
+    sys_chown_impl(
+        AT_FDCWD,
+        Some(path_name),
+        owner,
+        group,
+        ResolveFlags::NO_FOLLOW,
+    )
+}
+
+#[syscall_trace]
+pub fn sys_fchownat(
+    dir_fd: c_int,
+    path_name: UserInPtr<c_char>,
+    owner: c_int,
+    group: c_int,
+    flags: c_int,
+) -> LinuxResult<isize> {
+    let path_name = nullable!(path_name.get_as_str())?;
+    let owner = if owner == -1 { None } else { Some(owner as _) };
+    let group = if group == -1 { None } else { Some(group as _) };
+    let resolve_flags = ResolveFlags::from_bits_truncate(flags as _);
+    sys_chown_impl(dir_fd, path_name, owner, group, resolve_flags)
+}
+
+#[syscall_trace]
 pub fn sys_access(path_name: UserInPtr<c_char>, mode: c_uint) -> LinuxResult<isize> {
     let path_name = nullable!(path_name.get_as_str())?;
     let mode = mode as u16;
