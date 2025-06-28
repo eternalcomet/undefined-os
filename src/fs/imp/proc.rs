@@ -10,7 +10,7 @@ const SHMMAX: i32 = 134217728;
 const SHMMNI: i32 = 4096;
 const STAT: &str = "1 (systemd) S 0 1 1 0 -1 4194304 1234 0 0 0 12 34 0 0 0 0 1 0 123456 12345678 456 18446744073709551615 0x400000 0x401000 0x7fff12345678 0x7fff12345000 0x400123 0 0 0x00000000 0x00000000 0 0 0 17 0 0 0 0 0 0x600000 0x601000 0x602000 0x7fff12346000 0x7fff12346100 0x7fff12346100 0x7fff12346200 0";
 const EMPTY: &str = "";
-
+const CORE_PATTERN : &str = "|/wsl-capture-crash %t %E %p %s";
 const CPUINFO: &str = "processor       : 0
 vendor_id       : AuthenticAMD
 cpu family      : 25
@@ -594,6 +594,7 @@ fn builder(fs: Arc<DynamicFs>) -> DirMaker {
     kernel.add("shmmax", SimpleFile::new(fs.clone(), || SHMMAX.to_string()));
     kernel.add("shmmni", SimpleFile::new(fs.clone(), || SHMMNI.to_string()));
     kernel.add("printk", SimpleFile::new(fs.clone(), || PRINTK.to_string()));
+    kernel.add("core_pattern", SimpleFile::new(fs.clone(), || CORE_PATTERN.to_string()));
     // '/proc/sys'
     let mut sys = DynamicDir::builder(fs.clone());
     sys.add("kernel", kernel.build());
