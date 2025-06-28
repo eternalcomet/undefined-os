@@ -1,7 +1,7 @@
-use core::{mem, time::Duration};
-
 use arceos_posix_api::ctypes::timespec;
 use axerrno::{LinuxError, LinuxResult};
+use core::any::Any;
+use core::{mem, time::Duration};
 use linux_raw_sys::general::{
     MINSIGSTKSZ, SI_TKILL, SI_USER, SIG_BLOCK, SIG_SETMASK, SIG_UNBLOCK, kernel_sigaction, siginfo,
 };
@@ -16,6 +16,7 @@ use axhal::{
 use axsignal::{SignalInfo, SignalOSAction, SignalSet, SignalStack, Signo};
 use starry_core::process::{get_process_data, get_thread_data};
 use starry_core::task::{current_process, current_process_data, current_thread_data};
+use syscall_trace::syscall_trace;
 use undefined_process::Pid;
 use undefined_process::process::get_all_processes;
 use undefined_process::process_group::get_process_group;
@@ -28,17 +29,33 @@ pub fn check_signals(tf: &mut TrapFrame, restore_blocked: Option<SignalSet>) -> 
     };
 
     let signo = sig.signo();
+    const CORE_DUMP: u32 = 0x80;
     match os_action {
         SignalOSAction::Terminate => {
-            sys_exit_impl(128 + signo as i32, true);
+            debug!(
+                "[signal] handle signal: signo: {:?}, code: {}, os_action: Terminate",
+                signo,
+                sig.code()
+            );
+            sys_exit_impl(0, signo as u32, true);
         }
         SignalOSAction::CoreDump => {
             // TODO: implement core dump
-            sys_exit_impl(128 + signo as i32, true);
+            debug!(
+                "[signal] handle signal: signo: {:?}, code: {}, os_action: CoreDump",
+                signo,
+                sig.code()
+            );
+            sys_exit_impl(0, CORE_DUMP + signo as u32, true);
         }
         SignalOSAction::Stop => {
             // TODO: implement stop
-            sys_exit_impl(1, true);
+            debug!(
+                "[signal] handle signal: signo: {:?}, code: {}, os_action: Stop",
+                signo,
+                sig.code()
+            );
+            sys_exit_impl(0, signo as u32, true);
         }
         SignalOSAction::Continue => {
             // TODO: implement continue
@@ -164,6 +181,7 @@ fn make_siginfo(signo: u32, code: u32) -> LinuxResult<Option<SignalInfo>> {
     Ok(Some(SignalInfo::new(signo, code)))
 }
 
+#[syscall_trace]
 pub fn sys_kill(pid: i32, signo: u32) -> LinuxResult<isize> {
     let Some(sig) = make_siginfo(signo, SI_USER)? else {
         // TODO: should also check permissions

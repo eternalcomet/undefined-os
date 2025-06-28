@@ -3,26 +3,29 @@ use crate::imp::task::signal::{send_signal_process, send_signal_thread};
 use crate::ptr::{PtrWrapper, UserPtr};
 use axsignal::{SignalInfo, Signo};
 use core::sync::atomic::Ordering;
-use linux_raw_sys::general::SI_KERNEL;
+use linux_raw_sys::general::{SI_KERNEL, WEXITED};
 use starry_core::process::get_process_data;
 use starry_core::task::{
     current_process, current_process_data, current_thread, current_thread_data,
 };
 use undefined_process::Pid;
 
-pub fn sys_exit_impl(exit_code: i32, exit_group: bool) -> ! {
+pub fn sys_exit_impl(exit_code: u32, exit_signal: u32, exit_group: bool) -> ! {
     {
+        let exit_status = (exit_code & 0xff) << 8 | (exit_signal & 0xff);
         if exit_group {
             info!(
-                "[exit] process {} exiting with code {}",
+                "[exit] process {} exiting with code {}, signal {}",
                 current_process().get_pid(),
-                exit_code
+                exit_code,
+                exit_signal,
             );
         } else {
             info!(
-                "[exit] thread {} exiting with code {}",
+                "[exit] thread {} exiting with code {}, signal {}",
                 current_thread().get_tid(),
-                exit_code
+                exit_code,
+                exit_signal,
             );
         }
         let addr_clear_child_tid = current_thread_data()
@@ -40,7 +43,7 @@ pub fn sys_exit_impl(exit_code: i32, exit_group: bool) -> ! {
             });
             axtask::yield_now();
         }
-        current_thread().exit(exit_code);
+        current_thread().exit(exit_status as _);
         let process = current_process();
         if process.is_zombie() {
             // threads have exited
@@ -66,5 +69,5 @@ pub fn sys_exit_impl(exit_code: i32, exit_group: bool) -> ! {
             }
         }
     }
-    axtask::exit(exit_code)
+    axtask::exit(exit_code as _)
 }

@@ -94,9 +94,10 @@ pub fn sys_wait4(pid: i32, exit_code_ptr: UserOutPtr<i32>, options: u32) -> Linu
                 child.release();
             }
             if let Ok(exit_code) = exit_code {
-                // TODO: other exit signals (low 8 bits)
+                // get_exit_code returns exit status of the child process
+                // high 8 bits are exit code, low 8 bits are signal number
                 unsafe {
-                    *exit_code = child.get_exit_code() << 8;
+                    *exit_code = child.get_exit_code();
                 }
             }
             return Ok(child.get_pid() as _);
