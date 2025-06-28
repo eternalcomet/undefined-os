@@ -1,8 +1,15 @@
 use crate::fs::dynamic::dynamic::{DirMaker, DynamicDir, DynamicFs};
 use crate::fs::dynamic::file::SimpleFile;
+use alloc::string::ToString;
 use alloc::sync::Arc;
 use axsync::RawMutex;
 use undefined_vfs::fs::Filesystem;
+
+const PID_MAX: i32 = 4194304;
+const SHMMAX: i32 = 134217728;
+const SHMMNI: i32 = 4096;
+const STAT: &str = "1 (systemd) S 0 1 1 0 -1 4194304 1234 0 0 0 12 34 0 0 0 0 1 0 123456 12345678 456 18446744073709551615 0x400000 0x401000 0x7fff12345678 0x7fff12345000 0x400123 0 0 0x00000000 0x00000000 0 0 0 17 0 0 0 0 0 0x600000 0x601000 0x602000 0x7fff12346000 0x7fff12346100 0x7fff12346100 0x7fff12346200 0";
+const EMPTY: &str = "";
 
 const DUMMY_MEMINFO: &str = "MemTotal:       32536204 kB
 MemFree:         5506524 kB
@@ -69,6 +76,25 @@ pub fn new_procfs() -> Filesystem<RawMutex> {
 
 fn builder(fs: Arc<DynamicFs>) -> DirMaker {
     let mut root = DynamicDir::builder(fs.clone());
+    // '/proc/sys/kernel'
+    let mut kernel = DynamicDir::builder(fs.clone());
+    kernel.add(
+        "pid_max",
+        SimpleFile::new(fs.clone(), || PID_MAX.to_string()),
+    );
+    kernel.add("shmmax", SimpleFile::new(fs.clone(), || SHMMAX.to_string()));
+    kernel.add("shmmni", SimpleFile::new(fs.clone(), || SHMMNI.to_string()));
+    // '/proc/sys'
+    let mut sys = DynamicDir::builder(fs.clone());
+    sys.add("kernel", kernel.build());
+    root.add("sys", sys.build());
+
+    let mut one = DynamicDir::builder(fs.clone());
+    one.add("stat", SimpleFile::new(fs.clone(), || STAT));
+    root.add("1", one.build());
+    let mut sysvipc = DynamicDir::builder(fs.clone());
+    sysvipc.add("shm", SimpleFile::new(fs.clone(), || EMPTY));
+    root.add("sysvipc", sysvipc.build());
     root.add(
         "mounts",
         SimpleFile::new(
