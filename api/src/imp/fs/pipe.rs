@@ -1,7 +1,7 @@
-use alloc::sync::Arc;
 use crate::core::fs::fd::{FdFlags, FileDescriptor, fd_add, fd_remove};
 use crate::core::fs::pipe::Pipe;
 use crate::ptr::UserOutPtr;
+use alloc::sync::Arc;
 use axerrno::LinuxResult;
 use axfs_ng::api::FileFlags;
 use linux_raw_sys::general::O_CLOEXEC;

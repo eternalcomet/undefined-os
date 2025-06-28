@@ -23,7 +23,7 @@ pub fn get_trap_frame() -> Option<&'static mut TrapFrame> {
 }
 
 pub fn set_trap_frame(tf: *mut TrapFrame) {
-    TRAP_FRAME.with_current(|current| unsafe {
+    TRAP_FRAME.with_current(|current| {
         *current = tf;
     });
 }

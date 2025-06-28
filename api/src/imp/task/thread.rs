@@ -31,10 +31,13 @@ pub fn sys_setpgid(pid: u32, pgid: u32) -> LinuxResult<isize> {
     let process = if pid == 0 {
         current_process()
     } else {
-        if pid == current_process().get_pid(){
+        if pid == current_process().get_pid() {
             current_process()
-        }else{
-            current_process().get_child(pid).ok_or(LinuxError::ESRCH)?.clone()
+        } else {
+            current_process()
+                .get_child(pid)
+                .ok_or(LinuxError::ESRCH)?
+                .clone()
         }
     };
     if pgid == 0 {
@@ -85,6 +88,8 @@ pub fn sys_set_tid_address(tid_ptd: UserInPtr<i32>) -> LinuxResult<isize> {
     Ok(current_thread().get_tid() as _)
 }
 
+#[cfg(target_arch = "x86_64")]
+use crate::ptr::UserInOutPtr;
 #[cfg(target_arch = "x86_64")]
 use axhal::arch::TrapFrame;
 #[cfg(target_arch = "x86_64")]

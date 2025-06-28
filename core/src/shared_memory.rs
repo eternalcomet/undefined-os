@@ -1,5 +1,4 @@
 use alloc::collections::BTreeMap;
-use alloc::string::String;
 use alloc::sync::Arc;
 use axalloc::global_allocator;
 use axerrno::{LinuxError, LinuxResult};
@@ -73,5 +72,3 @@ impl SharedMemoryManager {
 }
 
 pub static SHARED_MEMORY_MANAGER: SharedMemoryManager = SharedMemoryManager::new();
-
-pub static SHARED_MEMORY_MAPPING: Mutex<BTreeMap<String, u32>> = Mutex::new(BTreeMap::new());

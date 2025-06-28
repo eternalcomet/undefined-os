@@ -2,7 +2,7 @@ use crate::core::time::TimeSpec;
 use crate::ptr::{UserConstPtr, UserInPtr, UserOutPtr, UserPtr};
 use crate::utils::task::{task_sleep_interruptable, task_yield};
 use axerrno::{LinuxError, LinuxResult};
-use axtask::{current, AxCpuMask};
+use axtask::{AxCpuMask, current};
 use syscall_trace::syscall_trace;
 
 #[syscall_trace]
@@ -28,8 +28,7 @@ pub fn sys_nanosleep(
     }
     Ok(0)
 }
-pub fn sys_sched_getaffinity
-(
+pub fn sys_sched_getaffinity(
     pid: i32,
     cpusetsize: usize,
     user_mask: UserPtr<u8>,

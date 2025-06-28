@@ -363,6 +363,7 @@ fn handle_syscall(tf: &mut TrapFrame, syscall_num: usize) -> isize {
         Sysno::sched_getparam => stub_bypass(syscall_num),
         Sysno::sched_setscheduler => stub_bypass(syscall_num),
         Sysno::sched_getscheduler => stub_bypass(syscall_num),
+        Sysno::msync => stub_bypass(syscall_num),
         _ => stub_unimplemented(syscall_num),
     };
     let ans = result.unwrap_or_else(|err| -err.code() as _);
