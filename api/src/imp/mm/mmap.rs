@@ -117,7 +117,7 @@ pub fn sys_mmap(
     };
 
     info!(
-        "mmap: addr: {:?}, length: {:x?}, prot: {:?}, flags: {:?}, fd: {:?}, offset: {:?}, page_size: {:?}",
+        "[sys_mmap]: addr: {:?}, length: {:x?}, prot: {:?}, flags: {:?}, fd: {:?}, offset: {:?}, page_size: {:?}",
         addr, length, permission_flags, map_flags, fd, offset, page_size
     );
 
@@ -145,22 +145,27 @@ pub fn sys_mmap(
             .ok_or(LinuxError::ENOMEM)?
     };
 
-    let populate = if fd == -1 {
-        false
+    let populate = fd > 0 && !map_flags.contains(MmapFlags::MAP_ANONYMOUS);
+    let writeable = permission_flags.contains(MmapProt::PROT_WRITE) && populate;
+
+    if map_flags.contains(MmapFlags::MAP_SHARED) {
+        // TODO: 仅在MAP_ANONYMOUS时才zero
+        aspace.map_shared(
+            start_addr,
+            aligned_length,
+            permission_flags.into(),
+            true,
+            page_size,
+        )?;
     } else {
-        !map_flags.contains(MmapFlags::MAP_ANONYMOUS)
-    };
-
-    let writeable = permission_flags.contains(MmapProt::PROT_WRITE)
-        && map_flags.contains(MmapFlags::MAP_SHARED);
-
-    aspace.map_alloc(
-        start_addr,
-        aligned_length,
-        permission_flags.into(),
-        populate,
-        page_size,
-    )?;
+        aspace.map_alloc(
+            start_addr,
+            aligned_length,
+            permission_flags.into(),
+            populate,
+            page_size,
+        )?;
+    }
 
     if populate {
         let file = File::from_fd(fd)?;
