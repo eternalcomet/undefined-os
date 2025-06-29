@@ -36,7 +36,7 @@ fn handle_syscall(tf: &mut TrapFrame, syscall_num: usize) -> isize {
     info!("[syscall] <{:?}> begin", sysno);
     set_trap_frame(tf);
     time_stat_from_user_to_kernel();
-    let result: LinuxResult<isize> = match sysno {
+    let result: LinuxResult<isize> = match Sysno::from(syscall_num as u32) {
         Sysno::read => sys_read(tf.arg0() as _, tf.arg1().into(), tf.arg2() as _),
         Sysno::write => sys_write(tf.arg0() as _, tf.arg1().into(), tf.arg2() as _),
         Sysno::mmap => sys_mmap(
@@ -408,8 +408,13 @@ fn handle_syscall(tf: &mut TrapFrame, syscall_num: usize) -> isize {
         Sysno::sched_setscheduler => stub_bypass(sysno),
         Sysno::sched_getscheduler => stub_bypass(sysno),
         Sysno::msync => stub_bypass(sysno),
+        Sysno::mknodat => stub_bypass(sysno),
         Sysno::setresuid => stub_bypass(sysno),
         Sysno::setsid => stub_bypass(sysno),
+        Sysno::fsync => stub_bypass(sysno),
+        Sysno::setregid => stub_bypass(sysno),
+        Sysno::clock_getres => stub_bypass(sysno),
+        Sysno::fallocate => stub_bypass(sysno),
         Sysno::splice => Err(LinuxError::EINVAL),
         _ => stub_unimplemented(syscall_num),
     };
