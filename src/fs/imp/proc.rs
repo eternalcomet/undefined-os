@@ -9,7 +9,7 @@ const PID_MAX: i32 = 4194304;
 const SHMMAX: i32 = 134217728;
 const SHMMNI: i32 = 4096;
 const STAT: &str = "1 (systemd) S 0 1 1 0 -1 4194304 1234 0 0 0 12 34 0 0 0 0 1 0 123456 12345678 456 18446744073709551615 0x400000 0x401000 0x7fff12345678 0x7fff12345000 0x400123 0 0 0x00000000 0x00000000 0 0 0 17 0 0 0 0 0 0x600000 0x601000 0x602000 0x7fff12346000 0x7fff12346100 0x7fff12346100 0x7fff12346200 0";
-const EMPTY: &str = "";
+const EMPTY: &str = "100";
 const CORE_PATTERN : &str = "|/wsl-capture-crash %t %E %p %s";
 const CPUINFO: &str = "processor       : 0
 vendor_id       : AuthenticAMD
@@ -577,6 +577,65 @@ DirectMap2M:    31492096 kB
 DirectMap1G:     1048576 kB
 ";
 const PRINTK: &str = "4       4       1       7";
+const STATUS: &str = "Name:   bash
+Umask:  0022
+State:  S (sleeping)
+Tgid:   44452
+Ngid:   0
+Pid:    44452
+PPid:   44451
+TracerPid:      0
+Uid:       0       0       0       0
+Gid:    1000    1000    1000    1000
+FDSize: 256
+Groups: 4 20 24 25 27 29 30 44 46 100 107 1000 1001
+NStgid: 44452
+NSpid:  44452
+NSpgid: 44452
+NSsid:  44452
+Kthread:        0
+VmPeak:     6204 kB
+VmSize:     6204 kB
+VmLck:         0 kB
+VmPin:         0 kB
+VmHWM:      5248 kB
+VmRSS:      5248 kB
+RssAnon:            1664 kB
+RssFile:            3584 kB
+RssShmem:              0 kB
+VmData:     1756 kB
+VmStk:       132 kB
+VmExe:       956 kB
+VmLib:      1824 kB
+VmPTE:        52 kB
+VmSwap:        0 kB
+HugetlbPages:          0 kB
+CoreDumping:    0
+THP_enabled:    1
+untag_mask:     0xffffffffffffffff
+Threads:        1
+SigQ:   1/30057
+SigPnd: 0000000000000000
+ShdPnd: 0000000000000000
+SigBlk: 0000000000010000
+SigIgn: 0000000000384004
+SigCgt: 000000004b813efb
+CapInh: 0000000000000000
+CapPrm: 0000000000000000
+CapEff: 0000000000000000
+CapBnd: 000001ffffffffff
+CapAmb: 0000000000000000
+NoNewPrivs:     0
+Seccomp:        2
+Seccomp_filters:        1
+Speculation_Store_Bypass:       thread vulnerable
+SpeculationIndirectBranch:      conditional enabled
+Cpus_allowed:   ffff
+Cpus_allowed_list:      0-15
+Mems_allowed:   00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000001
+Mems_allowed_list:      0
+voluntary_ctxt_switches:        107
+nonvoluntary_ctxt_switches:     1";
 pub fn new_procfs() -> Filesystem<RawMutex> {
     DynamicFs::new_with("proc".into(), 0x9fa0, builder)
 }
@@ -587,6 +646,7 @@ fn builder(fs: Arc<DynamicFs>) -> DirMaker {
     let mut kernel = DynamicDir::builder(fs.clone());
     let mut selfs = DynamicDir::builder(fs.clone());
     selfs.add("maps", SimpleFile::new(fs.clone(), || MAPS));
+    selfs.add("status", SimpleFile::new(fs.clone(), || STATUS));
     kernel.add(
         "pid_max",
         SimpleFile::new(fs.clone(), || PID_MAX.to_string()),
