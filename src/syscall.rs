@@ -10,6 +10,7 @@ use starry_api::imp::sys::*;
 use starry_api::imp::task::signal::*;
 use starry_api::imp::task::*;
 use starry_api::imp::utils::*;
+use starry_api::interface::fs::epoll::*;
 use starry_api::interface::fs::fd::*;
 use starry_api::interface::fs::io::*;
 use starry_api::interface::fs::path::*;
@@ -138,6 +139,19 @@ fn handle_syscall(tf: &mut TrapFrame, syscall_num: usize) -> isize {
         #[cfg(target_arch = "x86_64")]
         Sysno::access => sys_access(tf.arg0().into(), tf.arg1() as _),
         Sysno::clock_gettime => sys_clock_gettime(tf.arg0() as _, tf.arg1().into()),
+        Sysno::epoll_create1 => sys_epoll_create(tf.arg0() as _),
+        Sysno::epoll_ctl => sys_epoll_ctl(
+            tf.arg0() as _,
+            tf.arg1() as _,
+            tf.arg2() as _,
+            tf.arg3().into(),
+        ),
+        Sysno::epoll_pwait => sys_epoll_wait(
+            tf.arg0() as _,
+            tf.arg1().into(),
+            tf.arg2() as _,
+            tf.arg3() as _,
+        ),
         Sysno::exit_group => sys_exit_group(tf.arg0() as _),
         Sysno::faccessat => sys_faccessat(
             tf.arg0() as _,
@@ -390,6 +404,7 @@ fn handle_syscall(tf: &mut TrapFrame, syscall_num: usize) -> isize {
         Sysno::msync => stub_bypass(syscall_num),
         Sysno::setresuid => stub_bypass(syscall_num),
         Sysno::setsid => stub_bypass(syscall_num),
+        Sysno::splice => Err(LinuxError::EINVAL),
         _ => stub_unimplemented(syscall_num),
     };
     let ans = result.unwrap_or_else(|err| -err.code() as _);

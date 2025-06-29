@@ -283,7 +283,7 @@ pub fn sys_socket(domain: c_int, socktype: c_int, protocol: c_int) -> LinuxResul
         protocol as u32,
     );
     match (domain, socktype, protocol) {
-        (AF_INET, SOCK_STREAM, IPPROTO_TCP) | (AF_INET, SOCK_STREAM, 0) => {
+        (AF_INET, SOCK_STREAM, IPPROTO_TCP) | (_, SOCK_STREAM, 0) => {
             let socket = Socket::Tcp(Mutex::new(TcpSocket::new()));
             // let _ = socket.set_nonblocking((socktype & SOCK_NONBLOCK) != 0);
             // TODO: set close on exec
@@ -293,7 +293,7 @@ pub fn sys_socket(domain: c_int, socktype: c_int, protocol: c_int) -> LinuxResul
                 .map(|fd| fd as isize)
                 .map_err(|_| LinuxError::EMFILE)
         }
-        (AF_INET, _sock_dgram, IPPROTO_UDP) | (AF_INET, _sock_dgram, 0) => {
+        (AF_INET, _sock_dgram, IPPROTO_UDP) | (_, _sock_dgram, 0) => {
             Socket::Udp(Mutex::new(UdpSocket::new()))
                 .add_to_fd_table()
                 .map(|fd| fd as isize)

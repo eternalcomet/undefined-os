@@ -3,6 +3,7 @@ use axsync::RawMutex;
 use undefined_vfs::mount::Location;
 
 pub mod dir;
+pub(crate) mod epoll;
 pub mod fd;
 pub mod file;
 pub mod pipe;
