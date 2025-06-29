@@ -32,9 +32,10 @@ fn handle_page_fault(vaddr: VirtAddr, access_flags: MappingFlags, is_user: bool)
         .handle_page_fault(vaddr, access_flags)
     {
         warn!(
-            "{}: segmentation fault at {:#x}, send SIGSEGV.",
+            "{}: segmentation fault at {:#x}, access_flags: {:#x?}, send SIGSEGV.",
             axtask::current().id_name(),
-            vaddr
+            vaddr,
+            access_flags,
         );
         if send_signal_process(
             current_process().get_pid(),
@@ -43,7 +44,7 @@ fn handle_page_fault(vaddr: VirtAddr, access_flags: MappingFlags, is_user: bool)
         .is_err()
         {
             error!("send SIGSEGV failed");
-            sys_exit_impl(LinuxError::EFAULT as _, 0,false);
+            sys_exit_impl(LinuxError::EFAULT as _, Signo::SIGSEGV as _, false);
         }
     }
     true
