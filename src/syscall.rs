@@ -204,6 +204,12 @@ fn handle_syscall(tf: &mut TrapFrame, syscall_num: usize) -> isize {
             tf.arg2() as _,
             tf.arg3() as _,
         ),
+        Sysno::preadv => sys_preadv(
+            tf.arg0() as _,
+            tf.arg1().into(),
+            tf.arg2() as _,
+            tf.arg3() as _,
+        ),
         Sysno::prlimit64 => sys_prlimit64(
             tf.arg0() as _,
             tf.arg1() as _,
@@ -219,6 +225,12 @@ fn handle_syscall(tf: &mut TrapFrame, syscall_num: usize) -> isize {
             tf.arg5().into(),
         ),
         Sysno::pwrite64 => sys_pwrite64(
+            tf.arg0() as _,
+            tf.arg1().into(),
+            tf.arg2() as _,
+            tf.arg3() as _,
+        ),
+        Sysno::pwritev => sys_pwritev(
             tf.arg0() as _,
             tf.arg1().into(),
             tf.arg2() as _,

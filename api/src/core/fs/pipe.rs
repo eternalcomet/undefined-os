@@ -209,4 +209,11 @@ impl FileLike for Pipe {
     fn into_any(self: Arc<Self>) -> Arc<dyn Any + Send + Sync> {
         self
     }
+
+    fn type_mismatch_error(&self) -> LinuxError
+    where
+        Self: Sized + 'static,
+    {
+        LinuxError::ESPIPE
+    }
 }

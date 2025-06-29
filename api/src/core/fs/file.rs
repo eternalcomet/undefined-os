@@ -1,4 +1,4 @@
-use crate::core::fs::fd::FileLike;
+use crate::core::fs::fd::{FileDescriptor, FileLike, fd_lookup};
 use crate::core::fs::{ApiFile, FsLocation};
 use alloc::sync::Arc;
 use axerrno::LinuxResult;
@@ -27,6 +27,12 @@ impl File {
     pub fn from_location(location: FsLocation, flags: FileFlags) -> Self {
         let file = ApiFile::new(location, flags);
         Self::new(file)
+    }
+
+    pub fn from_fd(fd: FileDescriptor) -> LinuxResult<Arc<Self>> {
+        let file_like = fd_lookup(fd)?;
+        let err = file_like.type_mismatch_error();
+        file_like.into_any().downcast::<Self>().map_err(|_| err)
     }
 }
 

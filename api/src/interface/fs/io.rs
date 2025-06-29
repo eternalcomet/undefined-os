@@ -67,7 +67,7 @@ pub fn sys_write(fd: i32, buf: UserInPtr<u8>, count: usize) -> LinuxResult<isize
 #[derive(Debug, Copy, Clone)]
 pub struct UserIoVector {
     pub base_addr: *mut u8,
-    pub length: usize,
+    pub length: isize,
 }
 
 #[syscall_trace]
@@ -76,11 +76,18 @@ pub fn sys_readv(
     io_vectors: UserInPtr<UserIoVector>,
     io_count: i32,
 ) -> LinuxResult<isize> {
+    if io_count < 0 {
+        return Err(LinuxError::EINVAL);
+    }
     let io_vectors = io_vectors.get_as_slice(io_count as usize)?;
     let file_like = fd_lookup(fd as _)?;
     let mut total_read: isize = 0;
     for io in io_vectors {
-        let buf = unsafe { core::slice::from_raw_parts_mut(io.base_addr, io.length) };
+        if io.length < 0 {
+            return Err(LinuxError::EINVAL);
+        }
+        let buf_ptr = UserOutPtr::<u8>::from(io.base_addr as usize);
+        let buf = buf_ptr.get_as_mut_slice(io.length as _)?;
         let read_len = sys_read_impl(&*file_like, buf)?;
         total_read += read_len;
     }
@@ -93,11 +100,18 @@ pub fn sys_writev(
     io_vectors: UserInPtr<UserIoVector>,
     io_count: i32,
 ) -> LinuxResult<isize> {
+    if io_count < 0 {
+        return Err(LinuxError::EINVAL);
+    }
     let io_vectors = io_vectors.get_as_slice(io_count as usize)?;
     let file_like = fd_lookup(fd as _)?;
     let mut total_written: isize = 0;
     for io in io_vectors {
-        let buf = unsafe { core::slice::from_raw_parts(io.base_addr, io.length) };
+        if io.length < 0 {
+            return Err(LinuxError::EINVAL);
+        }
+        let buf_ptr = UserInPtr::<u8>::from(io.base_addr as usize);
+        let buf = buf_ptr.get_as_slice(io.length as _)?;
         let write_len = sys_write_impl(&*file_like, buf)?;
         total_written += write_len;
     }
@@ -112,7 +126,8 @@ pub fn sys_pread64(
     offset: usize,
 ) -> LinuxResult<isize> {
     let buf = buf.get_as_mut_slice(count)?;
-    sys_pread_impl(fd, buf, offset as _)
+    let file = File::from_fd(fd)?;
+    sys_pread_impl(&*file, buf, offset as _)
 }
 
 #[syscall_trace]
@@ -123,7 +138,8 @@ pub fn sys_pwrite64(
     offset: usize,
 ) -> LinuxResult<isize> {
     let buf = buf.get_as_slice(count)?;
-    sys_pwrite_impl(fd, buf, offset as _)
+    let file = File::from_fd(fd)?;
+    sys_pwrite_impl(&*file, buf, offset as _)
 }
 
 #[syscall_trace]
@@ -180,4 +196,54 @@ pub fn sys_sendfile(
     }
 
     Ok(transferred as _)
+}
+
+#[syscall_trace]
+pub fn sys_preadv(
+    fd: i32,
+    io_vectors: UserInPtr<UserIoVector>,
+    io_count: i32,
+    offset: isize,
+) -> LinuxResult<isize> {
+    if io_count < 0 {
+        return Err(LinuxError::EINVAL);
+    }
+    let io_vectors = io_vectors.get_as_slice(io_count as usize)?;
+    let file = File::from_fd(fd as _)?;
+    let mut total_read: isize = 0;
+    for io in io_vectors {
+        if io.length < 0 {
+            return Err(LinuxError::EINVAL);
+        }
+        let buf_ptr = UserOutPtr::<u8>::from(io.base_addr as usize);
+        let buf = buf_ptr.get_as_mut_slice(io.length as _)?;
+        let read_len = sys_pread_impl(&*file, buf, offset)?;
+        total_read += read_len;
+    }
+    Ok(total_read)
+}
+
+#[syscall_trace]
+pub fn sys_pwritev(
+    fd: i32,
+    io_vectors: UserInPtr<UserIoVector>,
+    io_count: i32,
+    offset: isize,
+) -> LinuxResult<isize> {
+    if io_count < 0 {
+        return Err(LinuxError::EINVAL);
+    }
+    let io_vectors = io_vectors.get_as_slice(io_count as usize)?;
+    let file = File::from_fd(fd as _)?;
+    let mut total_written: isize = 0;
+    for io in io_vectors {
+        if io.length < 0 {
+            return Err(LinuxError::EINVAL);
+        }
+        let buf_ptr = UserInPtr::<u8>::from(io.base_addr as usize);
+        let buf = buf_ptr.get_as_slice(io.length as _)?;
+        let write_len = sys_pwrite_impl(&*file, buf, offset)?;
+        total_written += write_len;
+    }
+    Ok(total_written)
 }

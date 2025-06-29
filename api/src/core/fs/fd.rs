@@ -49,6 +49,10 @@ pub trait FileLike: Send + Sync {
             .downcast::<Self>()
             .map_err(|_| LinuxError::EINVAL)
     }
+
+    fn type_mismatch_error(&self) -> LinuxError {
+        LinuxError::EINVAL
+    }
 }
 
 pub fn file_like_as<T: FileLike + 'static>(file_like: Arc<dyn FileLike>) -> Option<Arc<T>> {
