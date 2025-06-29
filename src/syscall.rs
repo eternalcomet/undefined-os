@@ -27,10 +27,16 @@ use syscalls::Sysno;
 
 #[register_trap_handler(SYSCALL)]
 fn handle_syscall(tf: &mut TrapFrame, syscall_num: usize) -> isize {
-    info!("[syscall] <{:?}> begin", Sysno::from(syscall_num as u32));
+    let sysno = Sysno::new(syscall_num as _);
+    if sysno.is_none() {
+        warn!("Invalid syscall number: {}", syscall_num);
+        return -LinuxError::EINVAL.code() as _;
+    }
+    let sysno = sysno.unwrap();
+    info!("[syscall] <{:?}> begin", sysno);
     set_trap_frame(tf);
     time_stat_from_user_to_kernel();
-    let result: LinuxResult<isize> = match Sysno::from(syscall_num as u32) {
+    let result: LinuxResult<isize> = match sysno {
         Sysno::read => sys_read(tf.arg0() as _, tf.arg1().into(), tf.arg2() as _),
         Sysno::write => sys_write(tf.arg0() as _, tf.arg1().into(), tf.arg2() as _),
         Sysno::mmap => sys_mmap(
@@ -377,43 +383,39 @@ fn handle_syscall(tf: &mut TrapFrame, syscall_num: usize) -> isize {
         Sysno::accept => sys_accept(tf.arg0() as _, tf.arg1() as _, tf.arg2() as _),
         Sysno::connect => sys_connect(tf.arg0() as _, tf.arg1() as _, tf.arg2() as _),
         #[cfg(target_arch = "x86_64")]
-        Sysno::access => stub_bypass(syscall_num), // TODO: implement access
-        Sysno::faccessat => stub_bypass(syscall_num),
-        Sysno::sync => stub_bypass(syscall_num),
-        Sysno::fsync => stub_bypass(syscall_num),
+        Sysno::access => stub_bypass(sysno), // TODO: implement access
+        Sysno::faccessat => stub_bypass(sysno),
+        Sysno::sync => stub_bypass(sysno),
+        Sysno::fsync => stub_bypass(sysno),
         Sysno::truncate => sys_truncate(tf.arg0().into(), tf.arg1() as _),
         Sysno::ftruncate => sys_ftruncate(tf.arg0() as _, tf.arg1() as _),
-        Sysno::syslog => stub_bypass(syscall_num),
-        Sysno::get_robust_list => stub_bypass(syscall_num),
-        Sysno::set_robust_list => stub_bypass(syscall_num),
-        Sysno::setgid => stub_bypass(syscall_num),
-        Sysno::setuid => stub_bypass(syscall_num),
-        Sysno::umask => stub_bypass(syscall_num),
-        Sysno::get_mempolicy => stub_bypass(syscall_num),
-        Sysno::socketpair => stub_bypass(syscall_num),
+        Sysno::syslog => stub_bypass(sysno),
+        Sysno::get_robust_list => stub_bypass(sysno),
+        Sysno::set_robust_list => stub_bypass(sysno),
+        Sysno::setgid => stub_bypass(sysno),
+        Sysno::setuid => stub_bypass(sysno),
+        Sysno::umask => stub_bypass(sysno),
+        Sysno::get_mempolicy => stub_bypass(sysno),
+        Sysno::socketpair => stub_bypass(sysno),
         Sysno::sched_getaffinity => {
             sys_sched_getaffinity(tf.arg0() as _, tf.arg1() as _, tf.arg2().into())
         }
         Sysno::sched_setaffinity => {
             sys_sched_setaffinity(tf.arg0() as _, tf.arg1() as _, tf.arg2().into())
         }
-        Sysno::sched_setparam => stub_bypass(syscall_num),
-        Sysno::sched_getparam => stub_bypass(syscall_num),
-        Sysno::sched_setscheduler => stub_bypass(syscall_num),
-        Sysno::sched_getscheduler => stub_bypass(syscall_num),
-        Sysno::msync => stub_bypass(syscall_num),
-        Sysno::setresuid => stub_bypass(syscall_num),
-        Sysno::setsid => stub_bypass(syscall_num),
+        Sysno::sched_setparam => stub_bypass(sysno),
+        Sysno::sched_getparam => stub_bypass(sysno),
+        Sysno::sched_setscheduler => stub_bypass(sysno),
+        Sysno::sched_getscheduler => stub_bypass(sysno),
+        Sysno::msync => stub_bypass(sysno),
+        Sysno::setresuid => stub_bypass(sysno),
+        Sysno::setsid => stub_bypass(sysno),
         Sysno::splice => Err(LinuxError::EINVAL),
         _ => stub_unimplemented(syscall_num),
     };
     let ans = result.unwrap_or_else(|err| -err.code() as _);
     time_stat_from_kernel_to_user();
-    info!(
-        "[syscall] <{:?}> return {}",
-        Sysno::from(syscall_num as u32),
-        ans
-    );
+    info!("[syscall] <{:?}> return {}", sysno, ans);
     ans
 }
 
@@ -425,11 +427,8 @@ fn stub_unimplemented(syscall_num: usize) -> Result<isize, LinuxError> {
     Err(LinuxError::ENOSYS)
 }
 
-fn stub_bypass(syscall_num: usize) -> Result<isize, LinuxError> {
-    warn!(
-        "Unimplemented syscall: {:?}, bypassed",
-        Sysno::from(syscall_num as u32)
-    );
+fn stub_bypass(sysno: Sysno) -> Result<isize, LinuxError> {
+    warn!("Unimplemented syscall: {:?}, bypassed", sysno);
     Ok(0)
 }
 
