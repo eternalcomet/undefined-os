@@ -11,6 +11,8 @@ const SHMMNI: i32 = 4096;
 const STAT: &str = "1 (systemd) S 0 1 1 0 -1 4194304 1234 0 0 0 12 34 0 0 0 0 1 0 123456 12345678 456 18446744073709551615 0x400000 0x401000 0x7fff12345678 0x7fff12345000 0x400123 0 0 0x00000000 0x00000000 0 0 0 17 0 0 0 0 0 0x600000 0x601000 0x602000 0x7fff12346000 0x7fff12346100 0x7fff12346100 0x7fff12346200 0";
 const EMPTY: &str = "100";
 const CORE_PATTERN : &str = "|/wsl-capture-crash %t %E %p %s";
+const PIPE_MAX_SIZE: &str = "1048576";
+const LEASE_BREAK_TIME : &str = "45";
 const CPUINFO: &str = "processor       : 0
 vendor_id       : AuthenticAMD
 cpu family      : 25
@@ -645,8 +647,12 @@ fn builder(fs: Arc<DynamicFs>) -> DirMaker {
     // '/proc/sys/kernel'
     let mut kernel = DynamicDir::builder(fs.clone());
     let mut selfs = DynamicDir::builder(fs.clone());
+    let mut FS = DynamicDir::builder(fs.clone());
+    FS.add("pipe-max-size", SimpleFile::new(fs.clone(), || PIPE_MAX_SIZE.to_string()));
+    FS.add("lease-break-time", SimpleFile::new(fs.clone(), || LEASE_BREAK_TIME.to_string()));
     selfs.add("maps", SimpleFile::new(fs.clone(), || MAPS));
     selfs.add("status", SimpleFile::new(fs.clone(), || STATUS));
+    selfs.add("stat", SimpleFile::new(fs.clone(), || STAT));
     kernel.add(
         "pid_max",
         SimpleFile::new(fs.clone(), || PID_MAX.to_string()),
@@ -658,11 +664,14 @@ fn builder(fs: Arc<DynamicFs>) -> DirMaker {
     // '/proc/sys'
     let mut sys = DynamicDir::builder(fs.clone());
     sys.add("kernel", kernel.build());
+    sys.add("fs", FS.build());
     root.add("sys", sys.build());
-
     let mut one = DynamicDir::builder(fs.clone());
     one.add("stat", SimpleFile::new(fs.clone(), || STAT));
+    let mut ten = DynamicDir::builder(fs.clone());
+    ten.add("stat", SimpleFile::new(fs.clone(), || STAT));
     root.add("1", one.build());
+    root.add("10", ten.build());
     let mut sysvipc = DynamicDir::builder(fs.clone());
     sysvipc.add("shm", SimpleFile::new(fs.clone(), || EMPTY));
     root.add("sysvipc", sysvipc.build());
