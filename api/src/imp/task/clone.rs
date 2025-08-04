@@ -166,6 +166,8 @@ pub fn sys_clone_impl(
             signal_actions,
             exit_signal,
         );
+        process_data.set_heap_bottom(current_process_data().get_heap_bottom());
+        process_data.set_heap_top(current_process_data().get_heap_top());
         let thread_data = create_thread_data(Arc::new(process_data), new_thread.get_tid());
 
         (new_thread, thread_data)
