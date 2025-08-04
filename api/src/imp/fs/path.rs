@@ -7,7 +7,8 @@ use crate::utils::path::{
 use axerrno::{LinuxError, LinuxResult};
 use bitflags::bitflags;
 use linux_raw_sys::general::{
-    R_OK, RENAME_EXCHANGE, RENAME_NOREPLACE, RENAME_WHITEOUT, W_OK, X_OK,
+    AT_SYMLINK_FOLLOW, AT_SYMLINK_NOFOLLOW, R_OK, RENAME_EXCHANGE, RENAME_NOREPLACE,
+    RENAME_WHITEOUT, W_OK, X_OK,
 };
 use undefined_vfs::types::{MetadataUpdate, NodePermission, NodeType};
 
@@ -29,7 +30,7 @@ pub fn sys_rename_impl(
 ) -> LinuxResult<isize> {
     let old_path = resolve_path_at(old_dir_fd, old_path, ResolveFlags::NO_FOLLOW)?;
     let old_path = old_path.location().ok_or(LinuxError::ENOTDIR)?;
-    let (new_path, new_name) = resolve_path_at_existed(new_dir_fd, new_path)?;
+    let (new_path, new_name) = resolve_path_at_existed(new_dir_fd, new_path, true)?;
 
     let parent = old_path.parent().ok_or(LinuxError::EINVAL)?;
     if new_name.is_empty() {
@@ -48,7 +49,10 @@ pub fn sys_rename_impl(
 
 pub fn sys_mkdir_impl(dir_fd: FileDescriptor, path: &str, mode: u16) -> LinuxResult<isize> {
     let mode = NodePermission::from_bits(mode).ok_or(LinuxError::EINVAL)?;
-    let (location, name) = resolve_path_at_existed(dir_fd, path)?;
+    let (location, name) = resolve_path_at_existed(dir_fd, path, true)?;
+    if name.is_empty() {
+        return Err(LinuxError::EEXIST);
+    }
     location.create(name.as_ref(), NodeType::Directory, mode)?;
     Ok(0)
 }
@@ -97,11 +101,16 @@ pub fn sys_link_impl(
     old_path: Option<&str>,
     new_dir_fd: FileDescriptor,
     new_path: &str,
-    flags: u32,
+    mut flags: u32,
 ) -> LinuxResult<isize> {
+    // By default, link(), does not dereference old_path if it is a symbolic link,
+    // unless flag AT_SYMLINK_FOLLOW is specified.
+    if (flags & AT_SYMLINK_FOLLOW) == 0 {
+        flags |= AT_SYMLINK_NOFOLLOW;
+    }
     let flags = ResolveFlags::from_bits_truncate(flags);
     let old_path = resolve_path_at(old_dir_fd, old_path, flags)?;
-    let (new_path, new_name) = resolve_path_at_existed(new_dir_fd, new_path)?;
+    let (new_path, new_name) = resolve_path_at_existed(new_dir_fd, new_path, true)?;
     let new_name = new_name.as_str();
 
     if new_name.is_empty() {
@@ -125,7 +134,7 @@ pub fn sys_symlink_impl(
     dir_fd: FileDescriptor,
     link_path: &str,
 ) -> LinuxResult<isize> {
-    let (location, name) = resolve_path_at_existed(dir_fd, link_path)?;
+    let (location, name) = resolve_path_at_existed(dir_fd, link_path, true)?;
     let name = name.as_str();
     if name.is_empty() {
         return Err(LinuxError::EEXIST);

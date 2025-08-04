@@ -10,8 +10,8 @@ use crate::utils::path::{fd_add_result, get_fs_context};
 use axerrno::{LinuxError, LinuxResult};
 use axfs_ng::api::{FileFlags, open};
 use linux_raw_sys::general::{
-    AT_FDCWD, F_DUPFD, F_DUPFD_CLOEXEC, F_GETFD, F_GETFL, F_SETFD, F_SETFL, O_CLOEXEC, O_RDONLY,
-    O_RDWR, O_WRONLY,
+    AT_FDCWD, F_DUPFD, F_DUPFD_CLOEXEC, F_GETFD, F_GETFL, F_SETFD, F_SETFL, O_CLOEXEC, O_NOFOLLOW,
+    O_RDONLY, O_RDWR, O_WRONLY,
 };
 use starry_core::resource::ResourceLimitType;
 use starry_core::task::current_process_data;
@@ -48,19 +48,25 @@ pub fn sys_open_impl(
     flags: u32,
     create_mode: u32,
 ) -> LinuxResult<FileDescriptor> {
+    let no_follow = (flags & O_NOFOLLOW) != 0;
     let open_flags = to_file_flags(flags);
     let context = get_fs_context();
     let uid = sys_geteuid()? as u32;
     let gid = sys_getegid()? as u32;
+    debug!(
+        "[sys_open_impl] open_flags: {:?}, uid: {}, gid: {}",
+        open_flags, uid, gid
+    );
     let create_user = Some((uid, gid));
 
     // 这里不使用 `resolve_path_at` 是因为我们需要容忍可能不存在的文件
+    let mode = Some(create_mode);
     let result = if parent_fd == AT_FDCWD {
-        open(path, &context, open_flags, Some(create_mode), create_user)?
+        open(path, &context, open_flags, mode, create_user, no_follow)?
     } else {
         let dir = Directory::from_fd(parent_fd)?;
         let context = context.with_current_dir(dir.inner().location().clone())?;
-        open(path, &context, open_flags, Some(create_mode), create_user)?
+        open(path, &context, open_flags, mode, create_user, no_follow)?
     };
     let fd_flags = if flags & O_CLOEXEC != 0 {
         FdFlags::CLOSE_ON_EXEC

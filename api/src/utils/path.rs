@@ -16,10 +16,9 @@ pub fn get_fs_context() -> MutexGuard<'static, FsContext<RawMutex>> {
     FS_CONTEXT.lock()
 }
 
-pub fn change_current_dir(path: impl AsRef<Path>) -> LinuxResult<()> {
+pub fn change_current_dir(location: FsLocation) -> LinuxResult<()> {
     let mut context = get_fs_context();
-    let dir = resolve_path(&context, &path, &mut 0, true)?;
-    context.change_dir(dir)?;
+    context.change_dir(location)?;
     Ok(())
 }
 
@@ -88,15 +87,16 @@ pub fn resolve_path_at(
 pub fn resolve_path_at_existed(
     parent_fd: FileDescriptor,
     path: impl AsRef<Path>,
+    no_follow: bool,
 ) -> LinuxResult<(FsLocation, PathBuf)> {
     let context = get_fs_context();
     let path = path.as_ref();
     let (location, rest) = if parent_fd == AT_FDCWD {
-        resolve_path_existed(&context, path, &mut 0)
+        resolve_path_existed(&context, path, &mut 0, no_follow)?
     } else {
         let dir = Directory::from_fd(parent_fd)?;
         let context = context.with_current_dir(dir.inner().location().clone())?;
-        resolve_path_existed(&context, path, &mut 0)
+        resolve_path_existed(&context, path, &mut 0, no_follow)?
     };
     let rest_path = rest.normalize().ok_or(LinuxError::ENOENT)?;
     if rest_path.as_str().find('/').is_some() {
