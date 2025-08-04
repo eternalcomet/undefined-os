@@ -1,9 +1,10 @@
 use crate::core::fs::dir::Directory;
-use crate::core::fs::fd::FileLike;
+use crate::core::fs::fd::{FileDescriptor, FileLike, fd_lookup};
 use crate::core::time::TimeSpec;
 use crate::ptr::{UserInPtr, UserOutPtr, nullable};
-use crate::utils::path::{ResolveFlags, change_current_dir, resolve_path_at};
+use crate::utils::path::{ResolveFlags, change_current_dir, get_fs_context, resolve_path_at};
 use axerrno::{LinuxError, LinuxResult};
+use axfs_ng::api::resolve_path;
 use axhal::time::wall_time;
 use core::ffi::{c_char, c_void};
 use core::mem::offset_of;
@@ -29,7 +30,18 @@ pub fn sys_ioctl(_fd: i32, _op: usize, _argp: UserInPtr<c_void>) -> LinuxResult<
 #[syscall_trace]
 pub fn sys_chdir(path: UserInPtr<c_char>) -> LinuxResult<isize> {
     let path = path.get_as_str()?;
+    let context = get_fs_context();
+    let path = resolve_path(&context, &path, &mut 0, true)?;
+    drop(context); // drop the context to avoid holding the lock longer than necessary
     change_current_dir(path)?;
+    Ok(0)
+}
+
+#[syscall_trace]
+pub fn sys_fchdir(fd: FileDescriptor) -> LinuxResult<isize> {
+    let file_like = fd_lookup(fd)?;
+    let location = file_like.location().ok_or(LinuxError::ENOTDIR)?;
+    change_current_dir(location)?;
     Ok(0)
 }
 

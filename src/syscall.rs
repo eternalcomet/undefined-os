@@ -165,6 +165,7 @@ fn handle_syscall(tf: &mut TrapFrame, syscall_num: usize) -> isize {
             tf.arg2() as _,
             tf.arg3() as _,
         ),
+        Sysno::fchdir => sys_fchdir(tf.arg0() as _),
         Sysno::fchmod => sys_fchmod(tf.arg0() as _, tf.arg1() as _),
         Sysno::fchmodat => sys_fchmodat(
             tf.arg0() as _,
