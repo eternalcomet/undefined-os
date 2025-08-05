@@ -10,8 +10,10 @@ fn mount_at(path: impl AsRef<Path>, mount_fs: Filesystem<RawMutex>) -> LinuxResu
     let path = path.as_ref();
     let context = FS_CONTEXT.lock();
     let mode = NodePermission::from_bits_truncate(0o755);
-    let (location, name) = resolve_path_existed(&context, &path, &mut 0);
-    location.create(name.as_ref(), NodeType::Directory, mode)?;
+    let (location, name) = resolve_path_existed(&context, &path, &mut 0, true)?;
+    if !name.is_empty() {
+        location.create(name.as_ref(), NodeType::Directory, mode)?;
+    }
     let mount_point = context.resolve(&path)?;
     mount_point.mount(&mount_fs)?;
     info!("Mounted {} at {}", mount_fs.name(), path);
