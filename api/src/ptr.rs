@@ -4,7 +4,7 @@ use axerrno::{LinuxError, LinuxResult};
 use axhal::paging::MappingFlags;
 use core::fmt::Debug;
 use core::{alloc::Layout, ffi::c_char, mem, slice, str};
-use memory_addr::{MemoryAddr, PAGE_SIZE_4K, VirtAddr, VirtAddrRange};
+use memory_addr::{MemoryAddr, VirtAddr, VirtAddrRange, PAGE_SIZE_4K};
 use starry_core::mm::access_user_memory;
 use starry_core::task::current_process_data;
 
@@ -184,6 +184,12 @@ impl<T> PtrWrapper<T> for UserPtr<T> {
 }
 
 impl<T> UserPtr<T> {
+    pub fn cast<U>(self) -> UserPtr<U> {
+        // SAFETY: This is safe because the pointer is valid and the layout is
+        // correct.
+        unsafe { UserPtr(self.0 as *mut U) }
+    }
+    
     /// Get the pointer as `&mut [T]`, terminated by a null value, validating
     /// the memory region.
     pub fn get_as_null_terminated(&self) -> LinuxResult<&'static mut [T]>
@@ -302,6 +308,12 @@ impl<T: Debug> UserConstPtr<T> {
 }
 
 impl<T> UserConstPtr<T> {
+    pub fn cast<U>(self) -> UserConstPtr<U> {
+        // SAFETY: This is safe because the pointer is valid and the layout is
+        // correct.
+        unsafe { UserConstPtr(self.0 as *const U) }
+    }
+    
     /// Get the pointer as `&[T]`, terminated by a null value, validating the
     /// memory region.
     pub fn get_as_null_terminated(&self) -> LinuxResult<&'static [T]>
