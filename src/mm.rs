@@ -5,10 +5,10 @@ use axhal::paging::MappingFlags;
 use axhal::trap::{PAGE_FAULT, register_trap_handler};
 use axsignal::{SignalInfo, Signo};
 use linux_raw_sys::general::SI_KERNEL;
-use starry_api::imp::task::signal::send_signal_process;
-use starry_api::imp::task::sys_exit_impl;
 use starry_core::mm::is_accessing_user_memory;
 use starry_core::task::{current_process, current_process_data};
+use undefined_os_api::imp::task::signal::send_signal_process;
+use undefined_os_api::imp::task::sys_exit_impl;
 
 #[register_trap_handler(PAGE_FAULT)]
 fn handle_page_fault(vaddr: VirtAddr, access_flags: MappingFlags, is_user: bool) -> bool {

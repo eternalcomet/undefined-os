@@ -3,10 +3,10 @@ use axfs_ng::api::{FS_CONTEXT, resolve_path};
 use axhal::arch::UspaceContext;
 use axsignal::Signo;
 use spin::Mutex;
-use starry_api::core::file::fd::FD_TABLE;
 use starry_core::mm::{copy_from_kernel, load_user_app, map_trampoline, new_user_aspace_empty};
 use starry_core::process::{ProcessData, create_thread_data};
 use starry_core::task::{TaskExt, create_user_task};
+use undefined_os_api::core::file::fd::FD_TABLE;
 use undefined_process::process::Process;
 
 pub fn run_user_app(args: &[String], envs: &[String]) -> Option<i32> {

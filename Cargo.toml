@@ -52,7 +52,7 @@ linkme = "0.3.33"
 memory_addr = "0.4"
 
 starry-core = { path = "./core" }
-starry-api = { path = "./api" }
+undefined-os-api = { path = "./api" }
 syscall-trace = { path = "./syscall_trace" }
 undefined-process = { path = "./process" }
 undefined-vfs = { git = "https://github.com/undefined-os/vfs" }
@@ -66,7 +66,7 @@ linux-raw-sys = { version = "0.9.3", default-features = false, features = [
 ] }
 
 [package]
-name = "starry"
+name = "undefined-os"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
@@ -93,7 +93,7 @@ axerrno.workspace = true
 linkme.workspace = true
 
 starry-core.workspace = true
-starry-api.workspace = true
+undefined-os-api.workspace = true
 arceos_posix_api.workspace = true
 linux-raw-sys.workspace = true
 undefined-process.workspace = true

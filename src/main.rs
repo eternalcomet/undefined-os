@@ -20,8 +20,8 @@ use axdriver_display::DisplayDriverOps;
 use axhal::mem::VirtAddr;
 use axmm::kernel_aspace;
 use entry::run_user_app;
-use starry_api::core::file::fd::{FD_TABLE, FdTable};
-use starry_api::core::fs::mount::mount_all;
+use undefined_os_api::core::file::fd::{FD_TABLE, FdTable};
+use undefined_os_api::core::fs::mount::mount_all;
 
 #[unsafe(no_mangle)]
 fn main() {

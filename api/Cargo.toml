@@ -1,5 +1,5 @@
 [package]
-name = "starry-api"
+name = "undefined-os-api"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
