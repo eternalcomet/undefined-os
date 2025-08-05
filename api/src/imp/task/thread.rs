@@ -28,26 +28,21 @@ enum ArchPrctlCode {
 }
 
 pub fn sys_setpgid(pid: u32, pgid: u32) -> LinuxResult<isize> {
-    let process = if pid == 0 {
+    let process = if pid == 0 || pid == current_process().get_pid() {
         current_process()
     } else {
-        if pid == current_process().get_pid() {
-            current_process()
-        } else {
-            current_process()
-                .get_child(pid)
-                .ok_or(LinuxError::ESRCH)?
-                .clone()
-        }
+        // pid must be a child of the calling process
+        current_process().get_child(pid).ok_or(LinuxError::ESRCH)?
     };
+
+    // I don't know why it's here
+    if pgid > 4194304 {
+        return Err(LinuxError::EINVAL);
+    }
     if pgid == 0 {
         process.create_group();
-    } else if pgid < 0 || pgid > 4194304 {
-        return Err(LinuxError::EINVAL);
-    } else {
-        if !process.move_to_group(pgid) {
-            return Err(LinuxError::EPERM);
-        }
+    } else if !process.move_to_group(pgid) {
+        return Err(LinuxError::EPERM);
     }
     Ok(0)
 }
