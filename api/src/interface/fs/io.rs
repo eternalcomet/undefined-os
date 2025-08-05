@@ -1,5 +1,5 @@
-use crate::core::fs::fd::{FileLike, fd_lookup, file_like_as};
-use crate::core::fs::file::File;
+use crate::core::file::fd::{FileLike, fd_lookup, file_like_as};
+use crate::core::file::file::File;
 use crate::imp::fs::{
     sys_pread_impl, sys_pwrite_impl, sys_read_impl, sys_truncate_impl, sys_write_impl,
 };

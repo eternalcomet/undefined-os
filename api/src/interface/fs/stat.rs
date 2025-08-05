@@ -1,4 +1,4 @@
-use crate::core::fs::fd::fd_lookup;
+use crate::core::file::fd::fd_lookup;
 use crate::core::time::TimeSpec;
 use crate::imp::fs::stat::sys_stat_impl;
 use crate::imp::fs::{FsStatxTimestamp, UserStatFs, sys_statfs_impl};

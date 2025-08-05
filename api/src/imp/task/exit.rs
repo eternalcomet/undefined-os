@@ -1,4 +1,4 @@
-use crate::core::fs::fd::close_all_file_like;
+use crate::core::file::fd::close_all_file_like;
 use crate::imp::task::signal::{send_signal_process, send_signal_thread};
 use crate::ptr::{PtrWrapper, UserPtr};
 use axsignal::{SignalInfo, Signo};

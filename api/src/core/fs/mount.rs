@@ -1,4 +1,4 @@
-use crate::fs::imp::{dev, proc, tmp};
+use crate::core::fs::imp::*;
 use axerrno::LinuxResult;
 use axfs_ng::api::{FS_CONTEXT, resolve_path_existed};
 use axsync::RawMutex;

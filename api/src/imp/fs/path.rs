@@ -1,5 +1,5 @@
-use crate::core::fs::fd::{FileDescriptor, file_like_as};
-use crate::core::fs::file::File;
+use crate::core::file::fd::{FileDescriptor, file_like_as};
+use crate::core::file::file::File;
 use crate::interface::user::identity::{sys_getgid, sys_getuid};
 use crate::utils::path::{
     Resolve, ResolveFlags, get_fs_context, resolve_path_at, resolve_path_at_existed,

@@ -1,5 +1,5 @@
-use crate::core::fs::fd::{FileDescriptor, FileLike, fd_lookup};
-use crate::core::fs::{ApiDir, FsLocation};
+use crate::core::file::fd::{FileDescriptor, FileLike, fd_lookup};
+use crate::core::file::{ApiDir, FsLocation};
 use alloc::sync::Arc;
 use axerrno::{LinuxError, LinuxResult};
 use axfs_ng::api::FileFlags;

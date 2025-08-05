@@ -1,10 +1,12 @@
-use crate::fs::dynamic::dynamic::{DirMaker, DynamicDir, DynamicFs};
-use crate::fs::dynamic::file::{Device, DeviceOps};
+pub mod framebuffer;
+
+use crate::core::fs::dynamic::dynamic::{DirMaker, DynamicDir, DynamicFs};
+use crate::core::fs::dynamic::file::{Device, DeviceOps};
+use crate::core::random::RANDOM_GENERATOR;
 use alloc::sync::Arc;
 use axerrno::LinuxResult;
 use axfs_ng::api::{FsContext, resolve_path};
 use axsync::RawMutex;
-use starry_api::core::random::RANDOM_GENERATOR;
 use undefined_vfs::VfsResult;
 use undefined_vfs::fs::Filesystem;
 use undefined_vfs::mount::Mountpoint;

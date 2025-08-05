@@ -1,4 +1,4 @@
-use crate::core::fs::fd::FD_TABLE;
+use crate::core::file::fd::FD_TABLE;
 use alloc::string::ToString;
 use alloc::sync::Arc;
 use axerrno::{LinuxError, LinuxResult};

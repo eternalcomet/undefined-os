@@ -1,7 +1,7 @@
 use core::ffi::c_int;
 
-use crate::core::fs::dir::Directory;
-use crate::core::fs::fd::{
+use crate::core::file::dir::Directory;
+use crate::core::file::fd::{
     FdFlags, FileDescriptor, FileLike, fd_add, fd_add_at, fd_get_flags, fd_lookup, fd_remove,
     fd_set_flags,
 };

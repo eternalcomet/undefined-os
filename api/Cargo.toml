@@ -16,6 +16,7 @@ axsync.workspace = true
 axtask.workspace = true
 axsignal.workspace = true
 axalloc.workspace = true
+axdriver_display.workspace = true
 axio.workspace = true
 axnet.workspace = true
 arceos_posix_api.workspace = true
@@ -25,6 +26,7 @@ bitflags.workspace = true
 linkme.workspace = true
 memory_addr.workspace = true
 linux-raw-sys.workspace = true
+inherit-methods-macro = "0.1.0"
 
 starry-core.workspace = true
 syscall-trace.workspace = true
@@ -40,6 +42,7 @@ rand_mt = "5.0.0"
 lazy_static = "1.5.0"
 flatten_objects = "0.2.3"
 percpu = { version = "0.2" }
+slab = { version = "0.4.10", default-features = false }
 
 [target.'cfg(target_arch = "x86_64")'.dependencies]
 x86 = "0.52"

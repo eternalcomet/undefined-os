@@ -1,5 +1,5 @@
-use crate::core::fs::fd::FileLike;
-use crate::core::fs::file::File;
+use crate::core::file::fd::FileLike;
+use crate::core::file::file::File;
 use axerrno::{LinuxError, LinuxResult};
 
 pub fn sys_truncate_impl(file: &File, length: u64) -> LinuxResult<isize> {

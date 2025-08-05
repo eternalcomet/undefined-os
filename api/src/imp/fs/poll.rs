@@ -1,5 +1,5 @@
-use crate::core::fs::fd::fd_lookup;
-use crate::core::fs::pipe::Pipe;
+use crate::core::file::fd::fd_lookup;
+use crate::core::file::pipe::Pipe;
 use crate::utils::task::task_yield_interruptable;
 use axerrno::LinuxResult;
 use bitflags::bitflags;

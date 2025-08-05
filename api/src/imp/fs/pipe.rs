@@ -1,5 +1,5 @@
-use crate::core::fs::fd::{FdFlags, FileDescriptor, fd_add, fd_remove};
-use crate::core::fs::pipe::Pipe;
+use crate::core::file::fd::{FdFlags, FileDescriptor, fd_add, fd_remove};
+use crate::core::file::pipe::Pipe;
 use crate::ptr::UserOutPtr;
 use alloc::sync::Arc;
 use axerrno::LinuxResult;

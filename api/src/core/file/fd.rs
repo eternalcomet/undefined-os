@@ -1,5 +1,5 @@
-use crate::core::fs::FsLocation;
-use crate::core::fs::stdio::{stdin, stdout};
+use crate::core::file::FsLocation;
+use crate::core::file::stdio::{stdin, stdout};
 use alloc::sync::Arc;
 use alloc::vec::Vec;
 use axerrno::{LinuxError, LinuxResult};

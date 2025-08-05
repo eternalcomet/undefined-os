@@ -7,7 +7,7 @@ use alloc::collections::btree_map::Entry;
 use alloc::sync::Arc;
 use core::{ffi::c_int, time::Duration};
 
-use crate::core::fs::fd::{FdFlags, FileLike, fd_add, fd_lookup};
+use crate::core::file::fd::{FdFlags, FileLike, fd_add, fd_lookup};
 use crate::utils::task::task_yield_interruptable;
 use axerrno::{LinuxError, LinuxResult};
 use axfs_ng::api::FileFlags;

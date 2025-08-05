@@ -7,7 +7,7 @@ use core::ffi::{CStr, c_char, c_int, c_void};
 use core::mem::size_of;
 use core::net::{IpAddr, Ipv4Addr, SocketAddr, SocketAddrV4};
 
-use crate::core::fs::fd::{FdFlags, FileLike, fd_add, fd_lookup};
+use crate::core::file::fd::{FdFlags, FileLike, fd_add, fd_lookup};
 use axerrno::{LinuxError, LinuxResult};
 use axfs_ng::api::FileFlags;
 use axio::PollState;

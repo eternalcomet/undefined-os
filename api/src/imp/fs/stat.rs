@@ -1,5 +1,5 @@
-use crate::core::fs::FsLocation;
-use crate::core::fs::fd::FileDescriptor;
+use crate::core::file::FsLocation;
+use crate::core::file::fd::FileDescriptor;
 use crate::core::time::TimeSpec;
 use crate::utils::path::{Resolve, ResolveFlags, resolve_path_at};
 use axerrno::LinuxResult;

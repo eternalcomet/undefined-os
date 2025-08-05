@@ -110,9 +110,21 @@ impl FileNodeOps<RawMutex> for SimpleFile {
     }
 }
 
+pub struct DeviceMem {
+    physical_addr: usize,
+    length: usize,
+}
+
 pub trait DeviceOps: Send + Sync {
     fn read_at(&self, buf: &mut [u8], offset: u64) -> VfsResult<usize>;
     fn write_at(&self, buf: &[u8], offset: u64) -> VfsResult<usize>;
+    fn get_device_mem(&self) -> Option<DeviceMem> {
+        None
+    }
+    fn ioctl(&self, op: u32, arg: usize) -> VfsResult<usize> {
+        // The specified operation does not apply to the kind of object that the file descriptor references.
+        Err(VfsError::ENOTTY)
+    }
 }
 impl<F> DeviceOps for F
 where

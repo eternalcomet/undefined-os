@@ -1,5 +1,5 @@
-use crate::core::fs::fd::FileLike;
-use crate::core::fs::file::File;
+use crate::core::file::fd::FileLike;
+use crate::core::file::file::File;
 use crate::ptr::UserInPtr;
 use crate::{
     ptr::{PtrWrapper, UserPtr},
@@ -17,6 +17,7 @@ use macro_rules_attribute::apply;
 use memory_addr::{MemoryAddr, VirtAddr, VirtAddrRange, align_up};
 use starry_core::task::current_process_data;
 use syscall_trace::syscall_trace;
+use undefined_vfs::types::NodeType;
 
 bitflags::bitflags! {
     /// permissions for sys_mmap

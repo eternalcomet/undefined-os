@@ -7,17 +7,21 @@ extern crate alloc;
 extern crate axlog;
 
 pub mod entry;
-mod fs;
 mod mm;
 mod syscall;
 
-use crate::fs::mount::mount_all;
 use alloc::string::{String, ToString};
 use alloc::vec;
 use alloc::vec::Vec;
+use axdisplay::get_main_display;
 use axfs_ng::api::FS_CONTEXT;
+
+use axdriver_display::DisplayDriverOps;
+use axhal::mem::VirtAddr;
+use axmm::kernel_aspace;
 use entry::run_user_app;
-use starry_api::core::fs::fd::{FD_TABLE, FdTable};
+use starry_api::core::file::fd::{FD_TABLE, FdTable};
+use starry_api::core::fs::mount::mount_all;
 
 #[unsafe(no_mangle)]
 fn main() {

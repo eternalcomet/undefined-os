@@ -1,5 +1,5 @@
-use crate::core::fs::epoll::EpollInstance;
-use crate::core::fs::fd::{FdFlags, FileLike, fd_add};
+use crate::core::file::epoll::EpollInstance;
+use crate::core::file::fd::{FdFlags, FileLike, fd_add};
 use crate::ptr::{UserInOutPtr, UserInPtr};
 use crate::utils::task::task_yield_interruptable;
 use alloc::sync::Arc;

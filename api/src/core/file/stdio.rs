@@ -1,4 +1,4 @@
-use crate::core::fs::fd::FileLike;
+use crate::core::file::fd::FileLike;
 use crate::utils::task::task_yield_interruptable;
 use alloc::sync::Arc;
 use alloc::vec;

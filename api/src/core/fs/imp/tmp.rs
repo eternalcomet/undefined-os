@@ -4,7 +4,7 @@ use alloc::{
     borrow::ToOwned, collections::btree_map::BTreeMap, string::String, sync::Arc, vec::Vec,
 };
 
-use crate::fs::dynamic::dynamic::dummy_stat_fs;
+use crate::core::fs::dynamic::dynamic::dummy_stat_fs;
 use axsync::{Mutex, RawMutex};
 use slab::Slab;
 use undefined_vfs::fs::{Filesystem, FilesystemOps, StatFs};
