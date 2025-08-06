@@ -2,6 +2,7 @@ use crate::core::file::dir::Directory;
 use crate::core::file::fd::{FileDescriptor, FileLike, fd_lookup};
 use crate::core::time::TimeSpec;
 use crate::ptr::{PtrWrapper, UserInOutPtr, UserInPtr, UserOutPtr, nullable};
+use crate::utils::dev::get_device_by_fd;
 use crate::utils::path::{ResolveFlags, change_current_dir, get_fs_context, resolve_path_at};
 use axerrno::{LinuxError, LinuxResult};
 use axfs_ng::api::resolve_path;
@@ -24,8 +25,23 @@ use undefined_vfs::types::{MetadataUpdate, NodeType};
 ///   and of type int in musl and other UNIX systems.
 /// * `argp` - The argument to the request. It is a pointer to a memory location
 #[syscall_trace]
-pub fn sys_ioctl(_fd: i32, _op: usize, _argp: UserInPtr<c_void>) -> LinuxResult<isize> {
-    warn!("Unimplemented syscall: SYS_IOCTL");
+pub fn sys_ioctl(fd: i32, op: usize, arg: UserInOutPtr<u8>) -> LinuxResult<isize> {
+    if let Some(device) = get_device_by_fd(fd) {
+        // If the file descriptor is a device, we can call its ioctl method
+        return device.ops().ioctl(op as u32, arg.address().as_usize());
+    }
+    const TIOCGPGRP: usize = 0x540F;
+    match op {
+        TIOCGPGRP => {
+            let process_group = current_process().get_group().get_pgid();
+            let result = arg.clone().cast::<Pid>();
+            let arg = result.get_as_mut_ref()?;
+            *arg = process_group;
+        }
+        _ => {
+            warn!("Unimplemented syscall: SYS_IOCTL");
+        }
+    }
     Ok(0)
 }
 
