@@ -1,6 +1,8 @@
-use crate::core::file::fd::FileLike;
+use crate::core::file::fd::{FileDescriptor, FileLike};
 use crate::core::file::file::File;
+use crate::core::fs::dynamic::file::DeviceMem;
 use crate::ptr::UserInPtr;
+use crate::utils::dev::get_device_by_fd;
 use crate::{
     ptr::{PtrWrapper, UserPtr},
     syscall_instrument,
@@ -8,16 +10,16 @@ use crate::{
 use alloc::vec;
 use axerrno::{LinuxError, LinuxResult};
 use axhal::paging::{MappingFlags, PageSize};
+use core::cmp::min;
 use linux_raw_sys::general::{
     MAP_ANONYMOUS, MAP_FIXED, MAP_FIXED_NOREPLACE, MAP_HUGE_1GB, MAP_HUGE_2MB, MAP_HUGETLB,
     MAP_NORESERVE, MAP_PRIVATE, MAP_SHARED, MAP_STACK, PROT_EXEC, PROT_GROWSDOWN, PROT_GROWSUP,
     PROT_READ, PROT_WRITE,
 };
 use macro_rules_attribute::apply;
-use memory_addr::{MemoryAddr, VirtAddr, VirtAddrRange, align_up};
+use memory_addr::{MemoryAddr, PhysAddr, VirtAddr, VirtAddrRange, align_up};
 use starry_core::task::current_process_data;
 use syscall_trace::syscall_trace;
-use undefined_vfs::types::NodeType;
 
 bitflags::bitflags! {
     /// permissions for sys_mmap
@@ -149,20 +151,45 @@ pub fn sys_mmap(
     let populate = fd > 0 && !map_flags.contains(MmapFlags::MAP_ANONYMOUS);
     let writeable = permission_flags.contains(MmapProt::PROT_WRITE) && populate;
 
-    if map_flags.contains(MmapFlags::MAP_SHARED) {
-        // TODO: 仅在MAP_ANONYMOUS时才zero
-        aspace.map_shared(
+    fn try_get_device_memory(fd: FileDescriptor) -> Option<DeviceMem> {
+        let device = get_device_by_fd(fd)?;
+        device.ops().get_device_mem()
+    }
+
+    let map_permission: MappingFlags = permission_flags.into();
+    if populate && let Some(device_memory) = try_get_device_memory(fd) {
+        // If the file is a device, we can use the device memory directly.
+        let phys_addr = PhysAddr::from(device_memory.physical_addr);
+        aspace.map_linear(
             start_addr,
-            aligned_length,
-            permission_flags.into(),
-            true,
+            phys_addr,
+            min(device_memory.length, aligned_length),
+            map_permission,
             page_size,
         )?;
+        // if the requested length is larger than the device memory length,
+        // we need to mapping the remaining part with zero.
+        if aligned_length > device_memory.length {
+            aspace.map_alloc(
+                start_addr + device_memory.length,
+                aligned_length - device_memory.length,
+                map_permission,
+                false,
+                page_size,
+            )?;
+        }
+        // early return
+        return Ok(start_addr.as_usize() as _);
+    }
+
+    if map_flags.contains(MmapFlags::MAP_SHARED) {
+        // TODO: 仅在MAP_ANONYMOUS时才zero
+        aspace.map_shared(start_addr, aligned_length, map_permission, true, page_size)?;
     } else {
         aspace.map_alloc(
             start_addr,
             aligned_length,
-            permission_flags.into(),
+            map_permission,
             populate,
             page_size,
         )?;
