@@ -2,8 +2,11 @@ pub mod framebuffer;
 
 use crate::core::fs::dynamic::dynamic::{DirMaker, DynamicDir, DynamicFs};
 use crate::core::fs::dynamic::file::{Device, DeviceOps};
+use crate::core::fs::imp::dev::framebuffer::FrameBuffer;
 use crate::core::random::RANDOM_GENERATOR;
 use alloc::sync::Arc;
+use axdisplay::get_main_display;
+use axdriver_display::DisplayDriverOps;
 use axerrno::LinuxResult;
 use axfs_ng::api::{FsContext, resolve_path};
 use axsync::RawMutex;
@@ -112,6 +115,17 @@ fn builder(fs: Arc<DynamicFs>) -> DirMaker {
     );
 
     root.add("shm", DynamicDir::builder(fs.clone()).build());
+
+    // TODO: add feature check
+    root.add(
+        "fb0",
+        Device::new(
+            fs.clone(),
+            NodeType::CharacterDevice,
+            DeviceId::new(29, 0),
+            FrameBuffer::new(get_main_display().lock().info()),
+        ),
+    );
 
     let builder = root.build();
     Arc::new(move |this| builder(this))

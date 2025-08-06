@@ -111,8 +111,8 @@ impl FileNodeOps<RawMutex> for SimpleFile {
 }
 
 pub struct DeviceMem {
-    physical_addr: usize,
-    length: usize,
+    pub physical_addr: usize,
+    pub length: usize,
 }
 
 pub trait DeviceOps: Send + Sync {
@@ -121,7 +121,11 @@ pub trait DeviceOps: Send + Sync {
     fn get_device_mem(&self) -> Option<DeviceMem> {
         None
     }
-    fn ioctl(&self, op: u32, arg: usize) -> VfsResult<usize> {
+    fn ioctl(&self, op: u32, arg: usize) -> VfsResult<isize> {
+        warn!(
+            "[ioctl] Unsupported ioctl operation. op: {}, arg: {}",
+            op, arg
+        );
         // The specified operation does not apply to the kind of object that the file descriptor references.
         Err(VfsError::ENOTTY)
     }
@@ -156,6 +160,10 @@ impl Device {
             node,
             ops: Arc::new(ops),
         })
+    }
+
+    pub fn ops(&self) -> &Arc<dyn DeviceOps> {
+        &self.ops
     }
 }
 

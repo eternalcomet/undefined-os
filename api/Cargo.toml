@@ -16,6 +16,7 @@ axsync.workspace = true
 axtask.workspace = true
 axsignal.workspace = true
 axalloc.workspace = true
+axdisplay.workspace = true
 axdriver_display.workspace = true
 axio.workspace = true
 axnet.workspace = true

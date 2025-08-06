@@ -2,7 +2,14 @@
 // Those ioctls take a pointer to a fb_fix_screeninfo and fb_var_screeninfo structure respectively.
 // See: https://www.kernel.org/doc/html/latest/fb/api.html#screen-information
 
+use crate::core::fs::dynamic::file::{DeviceMem, DeviceOps};
+use crate::ptr::UserOutPtr;
+use axdisplay::framebuffer_flush;
 use axdriver_display::DisplayInfo;
+use axerrno::LinuxError;
+use axhal::mem::virt_to_phys;
+use memory_addr::VirtAddr;
+use undefined_vfs::{VfsError, VfsResult};
 
 /// struct fb_fix_screeninfo stores device independent unchangeable information about the frame buffer device and the current format.
 /// Those information can’t be directly modified by applications, but can be changed by the driver when an application modifies the format.
@@ -73,6 +80,115 @@ pub struct FrameBufferBitfield {
     msb_right: u32,
 }
 
-struct FrameBuffer {
+pub struct FrameBuffer {
     info: DisplayInfo,
+}
+
+impl FrameBuffer {
+    pub fn new(info: DisplayInfo) -> Self {
+        Self { info }
+    }
+
+    #[deny(clippy::mut_from_ref)]
+    fn get_buffer(&self) -> &mut [u8] {
+        let info = &self.info;
+        unsafe { core::slice::from_raw_parts_mut(info.fb_base_vaddr as *mut u8, info.fb_size) }
+    }
+}
+
+impl DeviceOps for FrameBuffer {
+    fn read_at(&self, buf: &mut [u8], offset: u64) -> VfsResult<usize> {
+        let buffer = self.get_buffer();
+        let offset = offset as usize;
+        if offset >= buffer.len() {
+            return Ok(0);
+        }
+        let read_len = buf.len().min(buffer.len() - offset);
+        buf[..read_len].copy_from_slice(&buffer[offset..offset + read_len]);
+        Ok(read_len)
+    }
+
+    fn write_at(&self, buf: &[u8], offset: u64) -> VfsResult<usize> {
+        let buffer = self.get_buffer();
+        let offset = offset as usize;
+        if offset >= buffer.len() {
+            return Err(VfsError::ENOSPC);
+        }
+        let write_len = buf.len().min(buffer.len() - offset);
+        buffer[offset..offset + write_len].copy_from_slice(&buf[..write_len]);
+        if write_len > 0 {
+            // Flush the display to apply changes
+            framebuffer_flush();
+        }
+        Ok(write_len)
+    }
+
+    fn get_device_mem(&self) -> Option<DeviceMem> {
+        let physical_addr = virt_to_phys(VirtAddr::from(self.info.fb_base_vaddr));
+        Some(DeviceMem {
+            physical_addr: physical_addr.as_usize(),
+            length: self.info.fb_size,
+        })
+    }
+
+    fn ioctl(&self, op: u32, arg: usize) -> VfsResult<isize> {
+        const FBIOGET_VSCREENINFO: u32 = 0x4600;
+        const FBIOGET_FSCREENINFO: u32 = 0x4602;
+        const FBIO_WAITFORVSYNC: u32 = 0x4004_4620;
+        match op {
+            FBIOGET_VSCREENINFO => {
+                let info = FbVarScreenInfo {
+                    xres: self.info.width,
+                    yres: self.info.height,
+                    xres_virtual: self.info.width,
+                    yres_virtual: self.info.height,
+                    // RGBA8888
+                    bits_per_pixel: 8 * 4,
+                    red: FrameBufferBitfield {
+                        offset: 0,
+                        length: 8,
+                        msb_right: 0,
+                    },
+                    green: FrameBufferBitfield {
+                        offset: 8,
+                        length: 8,
+                        msb_right: 0,
+                    },
+                    blue: FrameBufferBitfield {
+                        offset: 16,
+                        length: 8,
+                        msb_right: 0,
+                    },
+                    transp: FrameBufferBitfield {
+                        offset: 24,
+                        length: 8,
+                        msb_right: 0,
+                    },
+                    ..Default::default()
+                };
+                let user_info: UserOutPtr<FbVarScreenInfo> = arg.into();
+                *user_info.get_as_mut_ref()? = info;
+                Ok(0)
+            }
+            FBIOGET_FSCREENINFO => {
+                let info = FbFixScreenInfo {
+                    smem_start: self.info.fb_base_vaddr as _,
+                    smem_len: self.info.fb_size as _,
+                    line_length: self.info.width * 4, // Assuming 4 bytes per pixel (RGBA8888)
+                    ..Default::default()
+                };
+                let user_info: UserOutPtr<FbFixScreenInfo> = arg.into();
+                *user_info.get_as_mut_ref()? = info;
+                Ok(0)
+            }
+            FBIO_WAITFORVSYNC => {
+                // This ioctl is used to wait for the next vertical sync.
+                // In a real implementation, this would block until the next vsync.
+                // Here we just return 0 to indicate success.
+                framebuffer_flush();
+                Ok(0)
+            }
+            _ => Err(LinuxError::ENOTTY),
+        }
+    }
 }
