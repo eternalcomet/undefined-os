@@ -3,6 +3,8 @@ use crate::ptr::{UserConstPtr, UserInPtr, UserOutPtr, UserPtr};
 use crate::utils::task::{task_sleep_interruptable, task_yield};
 use axerrno::{LinuxError, LinuxResult};
 use axtask::{AxCpuMask, current};
+use core::ffi::c_int;
+use linux_raw_sys::general::CLOCK_MONOTONIC;
 use syscall_trace::syscall_trace;
 
 #[syscall_trace]
@@ -28,6 +30,24 @@ pub fn sys_nanosleep(
     }
     Ok(0)
 }
+
+#[syscall_trace]
+pub fn sys_clock_nanosleep(
+    clock_id: u32,
+    flags: c_int,
+    requested: UserInPtr<TimeSpec>,
+    remain: UserOutPtr<TimeSpec>,
+) -> LinuxResult<isize> {
+    if clock_id != CLOCK_MONOTONIC {
+        return Err(LinuxError::EINVAL);
+    }
+    if flags != 0 {
+        return Err(LinuxError::ENOSYS);
+    }
+
+    sys_nanosleep(requested.clone(), remain.clone())
+}
+
 pub fn sys_sched_getaffinity(
     pid: i32,
     cpusetsize: usize,
