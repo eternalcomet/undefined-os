@@ -3,6 +3,7 @@ AX_TESTCASE ?= nimbos
 ARCH ?= x86_64
 LOG ?= off
 AX_TESTCASES_LIST=$(shell cat ./apps/$(AX_TESTCASE)/testcase_list | tr '\n' ',')
+AX_TESTCASES_FILE=$(shell realpath ./apps/$(AX_TESTCASE)/testcase_list)
 FEATURES ?= fp_simd
 
 export NO_AXSTD := y
@@ -14,6 +15,7 @@ ifneq ($(filter $(MAKECMDGOALS),doc_check_missing),) # make doc_check_missing
     export RUSTDOCFLAGS
 else ifeq ($(filter $(MAKECMDGOALS),clean user_apps ax_root),) # Not make clean, user_apps, ax_root
     export AX_TESTCASES_LIST
+    export AX_TESTCASES_FILE
 endif
 
 DIR := $(shell basename $(PWD))
@@ -52,9 +54,9 @@ ax_root:
 user_apps:
 	@make -C ./apps/$(AX_TESTCASE) ARCH=$(ARCH) build
 	@if [ -z "$(shell command -v sudo)" ]; then \
-		./build_img.sh -a $(ARCH) -file ./apps/$(AX_TESTCASE)/build/$(ARCH) -s 20; \
+		./build_img.sh -a $(ARCH) -file ./apps/$(AX_TESTCASE)/build/$(ARCH) -s 160; \
 	else \
-		sudo ./build_img.sh -a $(ARCH) -file ./apps/$(AX_TESTCASE)/build/$(ARCH) -s 20; \
+		sudo ./build_img.sh -a $(ARCH) -file ./apps/$(AX_TESTCASE)/build/$(ARCH) -s 160; \
 	fi
 	@mv ./disk.img $(AX_ROOT)/disk.img
 
