@@ -30,13 +30,8 @@ fn main() {
     FD_TABLE.init_new(FdTable::new());
     mount_all().expect("Mounting all filesystems failed");
 
-    let testcases = option_env!("AX_TESTCASES_LIST")
-        .unwrap_or_else(|| "Please specify the testcases list by making user_apps")
-        .split(',')
-        .filter(|&x| !x.is_empty());
-
-    let command = testcases.collect::<Vec<_>>().join("\n");
-    let args = vec!["/musl/busybox", "sh", "-c", &command];
+    let command = include_str!(env!("AX_TESTCASES_FILE"));
+    let args = vec!["/usr/bin/bash", "-c", command];
     let args: Vec<String> = args.into_iter().map(String::from).collect();
 
     let envs = vec![
