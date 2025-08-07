@@ -34,16 +34,17 @@ pub fn sys_rename_impl(
 
     let parent = old_path.parent().ok_or(LinuxError::EINVAL)?;
     if new_name.is_empty() {
+        // new path already exists
         if flags.contains(RenameFlags::NOREPLACE) {
             return Err(LinuxError::EEXIST);
         } else {
-            // new_location.unlink()
+            // needn't unlink the old path
             let parent = new_path.parent().ok_or(LinuxError::EINVAL)?;
             parent.rename(old_path.name(), &parent, new_path.name())?;
         }
     } else {
+        parent.rename(old_path.name(), &new_path, new_name.as_str())?;
     }
-    parent.rename(old_path.name(), &new_path, new_name.as_str())?;
     Ok(0)
 }
 
