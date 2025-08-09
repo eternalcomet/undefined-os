@@ -1,5 +1,6 @@
 use crate::core::fs::dynamic::dynamic::{DirMaker, DynamicDir, DynamicFs};
 use crate::core::fs::dynamic::file::SimpleFile;
+use alloc::format;
 use alloc::string::ToString;
 use alloc::sync::Arc;
 use axsync::RawMutex;
@@ -694,5 +695,12 @@ fn builder(fs: Arc<DynamicFs>) -> DirMaker {
     root.add("meminfo", SimpleFile::new(fs.clone(), || DUMMY_MEMINFO));
     root.add("cpuinfo", SimpleFile::new(fs.clone(), || CPUINFO));
     root.add("self", selfs.build());
+
+    // '/proc/interrupts'
+    root.add(
+        "interrupts",
+        SimpleFile::new(fs.clone(), || format!("0: {}", axtask::get_irq_count())),
+    );
+
     root.build()
 }
