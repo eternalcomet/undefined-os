@@ -151,6 +151,14 @@ fn handle_syscall(tf: &mut TrapFrame, syscall_num: usize) -> isize {
             tf.arg2().into(),
             tf.arg3().into(),
         ),
+        Sysno::copy_file_range => sys_copy_file_range(
+            tf.arg0() as _,
+            tf.arg1().into(),
+            tf.arg2() as _,
+            tf.arg3().into(),
+            tf.arg4() as _,
+            tf.arg5() as _,
+        ),
         Sysno::epoll_create1 => sys_epoll_create(tf.arg0() as _),
         Sysno::epoll_ctl => sys_epoll_ctl(
             tf.arg0() as _,
@@ -342,6 +350,14 @@ fn handle_syscall(tf: &mut TrapFrame, syscall_num: usize) -> isize {
         Sysno::shmdt => sys_shmdt(tf.arg0() as _),
         Sysno::shmget => sys_shmget(tf.arg0() as _, tf.arg1() as _, tf.arg2() as _),
         Sysno::sigaltstack => sys_sigaltstack(tf.arg0().into(), tf.arg1().into()),
+        Sysno::splice => sys_splice(
+            tf.arg0() as _,
+            tf.arg1().into(),
+            tf.arg2() as _,
+            tf.arg3().into(),
+            tf.arg4() as _,
+            tf.arg5() as _,
+        ),
         #[cfg(target_arch = "x86_64")]
         Sysno::stat => sys_stat(tf.arg0().into(), tf.arg1().into()),
         Sysno::statfs => sys_statfs(tf.arg0().into(), tf.arg1().into()),
@@ -417,7 +433,6 @@ fn handle_syscall(tf: &mut TrapFrame, syscall_num: usize) -> isize {
         Sysno::msync => stub_bypass(sysno),
         Sysno::setresuid => stub_bypass(sysno),
         Sysno::setsid => stub_bypass(sysno),
-        Sysno::splice => Err(LinuxError::EINVAL),
         _ => stub_unimplemented(syscall_num),
     };
     let ans = result.unwrap_or_else(|err| -err.code() as _);

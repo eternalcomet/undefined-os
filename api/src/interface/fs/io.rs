@@ -1,16 +1,16 @@
-use crate::core::file::fd::{FileLike, fd_lookup, file_like_as};
+use crate::core::file::fd::{FileDescriptor, fd_lookup, file_like_as};
 use crate::core::file::file::File;
+use crate::core::file::pipe::Pipe;
 use crate::imp::fs::{
-    sys_pread_impl, sys_pwrite_impl, sys_read_impl, sys_truncate_impl, sys_write_impl,
+    sys_copy_file_range_impl, sys_pread_impl, sys_pwrite_impl, sys_read_impl, sys_truncate_impl,
+    sys_write_impl,
 };
 use crate::ptr::{UserInOutPtr, UserInPtr, UserOutPtr, nullable};
 use crate::utils::path::resolve_path_at_cwd;
-use alloc::vec;
 use axerrno::{LinuxError, LinuxResult};
 use axfs_ng::api::FileFlags;
 use axio::SeekFrom;
-use core::cmp::min;
-use core::ffi::{c_char, c_int, c_long};
+use core::ffi::{c_char, c_int, c_long, c_uint};
 use syscall_trace::syscall_trace;
 
 #[syscall_trace]
@@ -127,7 +127,7 @@ pub fn sys_pread64(
 ) -> LinuxResult<isize> {
     let buf = buf.get_as_mut_slice(count)?;
     let file = File::from_fd(fd)?;
-    sys_pread_impl(&*file, buf, offset as _)
+    sys_pread_impl(&file, buf, offset as _)
 }
 
 #[syscall_trace]
@@ -139,62 +139,76 @@ pub fn sys_pwrite64(
 ) -> LinuxResult<isize> {
     let buf = buf.get_as_slice(count)?;
     let file = File::from_fd(fd)?;
-    sys_pwrite_impl(&*file, buf, offset as _)
+    sys_pwrite_impl(&file, buf, offset as _)
 }
 
 #[syscall_trace]
 pub fn sys_sendfile(
-    out_fd: i32,
-    in_fd: i32,
+    out_fd: FileDescriptor,
+    in_fd: FileDescriptor,
     offset: UserInOutPtr<usize>,
     count: usize,
 ) -> LinuxResult<isize> {
     let in_file = fd_lookup(in_fd)?;
     let out_file = fd_lookup(out_fd)?;
-    if !in_file.poll()?.readable || !out_file.poll()?.writable {
-        return Err(LinuxError::EBADF);
-    }
-    if out_file.get_flags().contains(FileFlags::APPEND) {
-        // out_fd has the O_APPEND flag set.
-        // This is not currently supported by sendfile().
+    let offset = nullable!(offset.get_as_mut_ref())?;
+    let transferred = sys_copy_file_range_impl(in_file, None, out_file, offset, count)?;
+    Ok(transferred as _)
+}
+
+#[syscall_trace]
+pub fn sys_copy_file_range(
+    in_fd: FileDescriptor,
+    in_offset: UserInOutPtr<usize>,
+    out_fd: FileDescriptor,
+    out_offset: UserInOutPtr<usize>,
+    count: usize,
+    _flags: c_uint,
+) -> LinuxResult<isize> {
+    let in_file = fd_lookup(in_fd)?;
+    let out_file = fd_lookup(out_fd)?;
+    let in_offset = nullable!(in_offset.get_as_mut_ref())?;
+    let out_offset = nullable!(out_offset.get_as_mut_ref())?;
+    // TODO: flags
+    // TODO: more checks
+    // 该系统调用仅支持常规文件，但我们的实现允许在管道和套接字等文件上使用。
+    // 此外，我们缺少对in_fd和out_fd相同时且区域可能重叠的处理。
+    let transferred = sys_copy_file_range_impl(in_file, in_offset, out_file, out_offset, count)?;
+    Ok(transferred as _)
+}
+
+#[syscall_trace]
+pub fn sys_splice(
+    in_fd: FileDescriptor,
+    in_offset: UserInOutPtr<usize>,
+    out_fd: FileDescriptor,
+    out_offset: UserInOutPtr<usize>,
+    count: usize,
+    _flags: c_uint,
+) -> LinuxResult<isize> {
+    // the type of offset is `off_t *` in fact, so we should check if the value is negative.
+    if let Ok(off) = in_offset.get_as_ref()
+        && *off > isize::MAX as _
+    {
         return Err(LinuxError::EINVAL);
     }
-    let buf_size = count.min(40960);
-    let mut buf = vec![0u8; buf_size];
-    let mut transferred = 0;
-    if offset.is_null() {
-        while transferred < count {
-            let buffer = &mut buf[..min(buf_size, count - transferred)];
-            let read_len = in_file.read(buffer)?;
-            if read_len == 0 {
-                break; // EOF
-            }
-            let write_len = out_file.write(&buffer[..read_len])?;
-            transferred += write_len;
-            if write_len < read_len {
-                break;
-            }
-        }
-    } else {
-        let offset = offset.get_as_mut_ref()?;
-        let in_file = file_like_as::<File>(in_file).ok_or(LinuxError::ESPIPE)?;
-        while transferred < count {
-            let buffer = &mut buf[..min(buf_size, count - transferred)];
-            let read_len = in_file
-                .inner()
-                .read_at(buffer, (*offset + transferred) as _)?;
-            if read_len == 0 {
-                break; // EOF
-            }
-            let write_len = out_file.write(&buffer[..read_len])?;
-            transferred += write_len;
-            if write_len < read_len {
-                break;
-            }
-        }
-        *offset += transferred;
+    if let Ok(off) = out_offset.get_as_ref()
+        && *off > isize::MAX as _
+    {
+        return Err(LinuxError::EINVAL);
     }
+    let in_file = fd_lookup(in_fd)?;
+    let out_file = fd_lookup(out_fd)?;
+    let in_offset = nullable!(in_offset.get_as_mut_ref())?;
+    let out_offset = nullable!(out_offset.get_as_mut_ref())?;
 
+    // One of the file descriptors must refer to a pipe.
+    if file_like_as::<Pipe>(in_file.clone()).is_none()
+        && file_like_as::<Pipe>(out_file.clone()).is_none()
+    {
+        return Err(LinuxError::EINVAL);
+    }
+    let transferred = sys_copy_file_range_impl(in_file, in_offset, out_file, out_offset, count)?;
     Ok(transferred as _)
 }
 
@@ -217,7 +231,7 @@ pub fn sys_preadv(
         }
         let buf_ptr = UserOutPtr::<u8>::from(io.base_addr as usize);
         let buf = buf_ptr.get_as_mut_slice(io.length as _)?;
-        let read_len = sys_pread_impl(&*file, buf, offset)?;
+        let read_len = sys_pread_impl(&file, buf, offset)?;
         total_read += read_len;
     }
     Ok(total_read)
@@ -242,7 +256,7 @@ pub fn sys_pwritev(
         }
         let buf_ptr = UserInPtr::<u8>::from(io.base_addr as usize);
         let buf = buf_ptr.get_as_slice(io.length as _)?;
-        let write_len = sys_pwrite_impl(&*file, buf, offset)?;
+        let write_len = sys_pwrite_impl(&file, buf, offset)?;
         total_written += write_len;
     }
     Ok(total_written)
