@@ -119,7 +119,28 @@ pub fn load_user_app(
         error!("Load user app could not read file: {}", path);
     })?;
     drop(context);
-    let elf = ElfFile::new(&file_data).map_err(|_| AxError::InvalidData)?;
+    let elf = if let Ok(elf) = ElfFile::new(&file_data) {
+        elf
+    } else {
+        // Not a valid ELF file, maybe a script file.
+        if file_data.starts_with(b"#!") {
+            // A script file, try to read the interpreter path.
+            let first_line_end = file_data
+                .iter()
+                .position(|&c| c == b'\n')
+                .unwrap_or(file_data.len());
+            let first_line = &file_data[2..first_line_end];
+            let interp_path = core::str::from_utf8(first_line)
+                .map_err(|_| LinuxError::EINVAL)?
+                .trim();
+            let mut new_args = vec![interp_path.to_string()];
+            new_args.extend_from_slice(args);
+            return load_user_app(uspace, &new_args, envs);
+        } else {
+            error!("Load user app invalid ELF file: {}", path);
+            return Err(LinuxError::ENOEXEC);
+        }
+    };
 
     if let Some(interp) = elf
         .program_iter()
