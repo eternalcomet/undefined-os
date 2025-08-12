@@ -79,7 +79,7 @@ fn sys_clone_(
     // param check
     // If CLONE_THREAD or CLONE_PARENT was specified in the flags,
     // a signal must not be specified in exit_signal.
-    if !exit_signal.is_none() && clone_flags.contains(CloneFlags::THREAD | CloneFlags::PARENT) {
+    if exit_signal.is_some() && clone_flags.contains(CloneFlags::THREAD | CloneFlags::PARENT) {
         return Err(LinuxError::EINVAL);
     }
     // Since Linux 2.6.0, the flags mask must also include CLONE_VM if CLONE_SIGHAND is specified.

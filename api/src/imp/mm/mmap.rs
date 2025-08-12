@@ -210,7 +210,7 @@ pub fn sys_mmap(
             return Err(LinuxError::EINVAL);
         }
         let offset = offset as usize;
-        let length = core::cmp::min(length, file_size - offset);
+        let length = min(length, file_size - offset);
         let mut buf = vec![0u8; length];
         file.read_at(&mut buf, offset as _)?;
         aspace.write(start_addr, page_size, &buf)?;
