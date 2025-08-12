@@ -79,8 +79,7 @@ pub struct Pipe {
     readable: bool,
     buffer: Arc<Mutex<PipeRingBuffer>>,
     inode: u64,
-    // TODO: non-blocking support, flags support, etc.
-    file_flags: FileFlags,
+    file_flags: Mutex<FileFlags>,
 }
 
 impl Pipe {
@@ -91,13 +90,13 @@ impl Pipe {
             readable: true,
             buffer: buffer.clone(),
             inode: inode as _,
-            file_flags,
+            file_flags: Mutex::new(file_flags | FileFlags::READ),
         };
         let write_end = Pipe {
             readable: false,
             buffer,
             inode: inode as _,
-            file_flags,
+            file_flags: Mutex::new(file_flags | FileFlags::WRITE),
         };
         (read_end, write_end)
     }
@@ -114,8 +113,8 @@ impl Pipe {
         Arc::strong_count(&self.buffer) == 1
     }
 
-    pub fn non_blocking(&self) -> bool {
-        self.file_flags.contains(FileFlags::NON_BLOCK)
+    pub fn is_non_block(&self) -> bool {
+        self.file_flags.lock().contains(FileFlags::NON_BLOCK)
     }
 }
 
@@ -126,14 +125,17 @@ impl FileLike for Pipe {
         }
         let mut read_size = 0usize;
         let max_len = buf.len();
+        let is_non_block = self.is_non_block();
         loop {
             let mut ring_buffer = self.buffer.lock();
             let loop_read = ring_buffer.available_read();
             if loop_read == 0 {
-                if self.write_end_close() || read_size > 0
-                /* || non_block */
-                {
+                if self.write_end_close() || read_size > 0 {
                     return Ok(read_size);
+                }
+                // write end is open but the pipe is empty
+                if is_non_block {
+                    return Err(LinuxError::EAGAIN);
                 }
                 drop(ring_buffer);
                 // Data not ready, wait for write end
@@ -157,9 +159,27 @@ impl FileLike for Pipe {
         }
         let mut write_size = 0usize;
         let max_len = buf.len();
+        let is_non_block = self.is_non_block();
         loop {
             let mut ring_buffer = self.buffer.lock();
             let loop_write = ring_buffer.available_write();
+            // non-blocking write to pipe
+            // 如果请求写入的字节数 n<= PIPE_BUF：write会立即返回失败，设置 errno = EAGAIN。
+            // 如果 n> PIPE_BUF：write会尽力写入管道当前能容纳的最大连续空间 k（k>= 1），并返回实际写入的字节数 k。如果管道当前已完全满，连一个字节都写不进去，则立即返回失败，设置 errno = EAGAIN。
+            if is_non_block && loop_write < max_len {
+                if max_len <= RING_BUFFER_SIZE {
+                    return Err(LinuxError::EAGAIN);
+                } else {
+                    if loop_write == 0 {
+                        return Err(LinuxError::EAGAIN);
+                    }
+                    for _ in 0..loop_write {
+                        ring_buffer.write_byte(buf[write_size]);
+                        write_size += 1;
+                    }
+                    return Ok(write_size);
+                }
+            }
             if loop_write == 0 {
                 drop(ring_buffer);
                 // Buffer is full, wait for read end to consume
@@ -199,11 +219,11 @@ impl FileLike for Pipe {
     }
 
     fn get_flags(&self) -> FileFlags {
-        self.file_flags
+        *self.file_flags.lock()
     }
 
-    fn set_flags(&self, _flags: FileFlags) {
-        todo!()
+    fn set_flags(&self, flags: FileFlags) {
+        *self.file_flags.lock() = flags;
     }
 
     fn into_any(self: Arc<Self>) -> Arc<dyn Any + Send + Sync> {
