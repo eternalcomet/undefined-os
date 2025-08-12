@@ -26,15 +26,11 @@ OUT_BIN := $(DIR)_$(ARCH)-qemu-virt.bin
 ifeq ($(ARCH), x86_64)
   TARGET := x86_64-unknown-none
 else ifeq ($(ARCH), aarch64)
-  ifeq ($(findstring fp_simd,$(FEATURES)),)
-    TARGET := aarch64-unknown-none-softfloat
-  else
-    TARGET := aarch64-unknown-none
-  endif
+  TARGET := aarch64-unknown-none-softfloat
 else ifeq ($(ARCH), riscv64)
   TARGET := riscv64gc-unknown-none-elf
 else ifeq ($(ARCH), loongarch64)
-  TARGET := loongarch64-unknown-none
+  TARGET := loongarch64-unknown-none-softfloat
 else
   $(error ARCH must be one of x86_64, aarch64, riscv64, loongarch64)
 endif
