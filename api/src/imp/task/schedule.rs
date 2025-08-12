@@ -39,7 +39,7 @@ pub fn sys_clock_nanosleep(
     remain: UserOutPtr<TimeSpec>,
 ) -> LinuxResult<isize> {
     if clock_id != CLOCK_MONOTONIC {
-        return Err(LinuxError::EINVAL);
+        debug!("[sys_clock_nanosleep] Unsupported clock_id: {}", clock_id);
     }
     if flags != 0 {
         return Err(LinuxError::ENOSYS);
