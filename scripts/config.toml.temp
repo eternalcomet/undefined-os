@@ -18,9 +18,6 @@ axdisplay = { path = "%AX_ROOT%/modules/axdisplay" }
 [patch.'https://github.com/undefined-os/vfs.git']
 undefined-vfs = { path = "modules/vfs" }
 
-[patch.'https://github.com/Mivik/lwext4_rust']
-lwext4_rust = { path = "modules/lwext4_rust" }
-
 [patch.crates-io]
 page_table_multiarch = { git = "https://github.com/eternalcomet/page_table_multiarch.git" }
 page_table_entry = { git = "https://github.com/eternalcomet/page_table_multiarch.git" }
