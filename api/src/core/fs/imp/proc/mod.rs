@@ -1,18 +1,23 @@
-use crate::core::fs::dynamic::dynamic::{DirMaker, DynamicDir, DynamicFs};
-use crate::core::fs::dynamic::file::SimpleFile;
+mod process;
+mod task_stat;
+
+use crate::core::file::pipe::PIPE_MAX_SIZE;
+use crate::core::fs::imp::proc::process::ProcessInfoDir;
+use crate::core::fs::pseudo::dynamic::{DirMaker, DynamicDir, DynamicFs};
+use crate::core::fs::pseudo::file::SimpleFile;
 use alloc::format;
 use alloc::string::ToString;
 use alloc::sync::Arc;
 use axsync::RawMutex;
+use starry_core::task::current_process;
 use undefined_vfs::fs::Filesystem;
+use undefined_vfs::types::{NodePermission, NodeType};
 
 const PID_MAX: i32 = 4194304;
 const SHMMAX: i32 = 134217728;
 const SHMMNI: i32 = 4096;
-const STAT: &str = "1 (systemd) S 0 1 1 0 -1 4194304 1234 0 0 0 12 34 0 0 0 0 1 0 123456 12345678 456 18446744073709551615 0x400000 0x401000 0x7fff12345678 0x7fff12345000 0x400123 0 0 0x00000000 0x00000000 0 0 0 17 0 0 0 0 0 0x600000 0x601000 0x602000 0x7fff12346000 0x7fff12346100 0x7fff12346100 0x7fff12346200 0";
 const EMPTY: &str = "100";
 const CORE_PATTERN: &str = "|/wsl-capture-crash %t %E %p %s";
-const PIPE_MAX_SIZE: &str = "1048576";
 const LEASE_BREAK_TIME: &str = "45";
 const CPUINFO: &str = "processor       : 0
 vendor_id       : AuthenticAMD
@@ -504,7 +509,7 @@ const MAP : &str = "
 7ffc075ce000-7ffc075d2000 r--p 00000000 00:00 0                          [vvar]
 7ffc075d2000-7ffc075d4000 r-xp 00000000 00:00 0                          [vdso]";
 
-const MAPS: &str = "
+const DUMMY_MAPS: &str = "
 00400000-0040b000 r-xp 00000000 08:01 1234567 /bin/bash
 0060a000-0060b000 r--p 0000a000 08:01 1234567 /bin/bash
 0060b000-0060c000 rw-p 0000b000 08:01 1234567 /bin/bash
@@ -580,7 +585,7 @@ DirectMap2M:    31492096 kB
 DirectMap1G:     1048576 kB
 ";
 const PRINTK: &str = "4       4       1       7";
-const STATUS: &str = "Name:   bash
+const DUMMY_STATUS: &str = "Name:   bash
 Umask:  0022
 State:  S (sleeping)
 Tgid:   44452
@@ -647,7 +652,7 @@ fn builder(fs: Arc<DynamicFs>) -> DirMaker {
     let mut root = DynamicDir::builder(fs.clone());
     // '/proc/sys/kernel'
     let mut kernel = DynamicDir::builder(fs.clone());
-    let mut selfs = DynamicDir::builder(fs.clone());
+    // '/proc/fs'
     let mut FS = DynamicDir::builder(fs.clone());
     FS.add(
         "pipe-max-size",
@@ -657,9 +662,6 @@ fn builder(fs: Arc<DynamicFs>) -> DirMaker {
         "lease-break-time",
         SimpleFile::new(fs.clone(), || LEASE_BREAK_TIME.to_string()),
     );
-    selfs.add("maps", SimpleFile::new(fs.clone(), || MAPS));
-    selfs.add("status", SimpleFile::new(fs.clone(), || STATUS));
-    selfs.add("stat", SimpleFile::new(fs.clone(), || STAT));
     kernel.add(
         "pid_max",
         SimpleFile::new(fs.clone(), || PID_MAX.to_string()),
@@ -676,12 +678,6 @@ fn builder(fs: Arc<DynamicFs>) -> DirMaker {
     sys.add("kernel", kernel.build());
     sys.add("fs", FS.build());
     root.add("sys", sys.build());
-    let mut one = DynamicDir::builder(fs.clone());
-    one.add("stat", SimpleFile::new(fs.clone(), || STAT));
-    let mut ten = DynamicDir::builder(fs.clone());
-    ten.add("stat", SimpleFile::new(fs.clone(), || STAT));
-    root.add("1", one.build());
-    root.add("10", ten.build());
     let mut sysvipc = DynamicDir::builder(fs.clone());
     sysvipc.add("shm", SimpleFile::new(fs.clone(), || EMPTY));
     root.add("sysvipc", sysvipc.build());
@@ -694,7 +690,6 @@ fn builder(fs: Arc<DynamicFs>) -> DirMaker {
     );
     root.add("meminfo", SimpleFile::new(fs.clone(), || DUMMY_MEMINFO));
     root.add("cpuinfo", SimpleFile::new(fs.clone(), || CPUINFO));
-    root.add("self", selfs.build());
 
     // '/proc/interrupts'
     root.add(
@@ -702,5 +697,17 @@ fn builder(fs: Arc<DynamicFs>) -> DirMaker {
         SimpleFile::new(fs.clone(), || format!("0: {}", axtask::get_irq_count())),
     );
 
+    // '/proc/self'
+    root.add(
+        "self",
+        SimpleFile::create(
+            fs.clone(),
+            NodeType::Symlink,
+            NodePermission::default(),
+            || current_process().get_pid().to_string(),
+        ),
+    );
+
+    root.set_pseudo_ops(ProcessInfoDir::new(fs.clone()));
     root.build()
 }

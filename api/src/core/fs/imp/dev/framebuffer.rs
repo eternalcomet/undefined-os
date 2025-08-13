@@ -2,7 +2,7 @@
 // Those ioctls take a pointer to a fb_fix_screeninfo and fb_var_screeninfo structure respectively.
 // See: https://www.kernel.org/doc/html/latest/fb/api.html#screen-information
 
-use crate::core::fs::dynamic::file::{DeviceMem, DeviceOps};
+use crate::core::fs::pseudo::file::{DeviceMem, DeviceOps};
 use crate::ptr::UserOutPtr;
 use axdisplay::framebuffer_flush;
 use axdriver_display::DisplayInfo;

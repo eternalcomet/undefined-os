@@ -1,6 +1,6 @@
 use crate::core::file::fd::{FileDescriptor, FileLike};
 use crate::core::file::file::File;
-use crate::core::fs::dynamic::file::DeviceMem;
+use crate::core::fs::pseudo::file::DeviceMem;
 use crate::ptr::UserInPtr;
 use crate::utils::dev::get_device_by_fd;
 use crate::{

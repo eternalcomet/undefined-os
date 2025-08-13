@@ -1,8 +1,8 @@
 pub mod framebuffer;
 
-use crate::core::fs::dynamic::dynamic::{DirMaker, DynamicDir, DynamicFs};
-use crate::core::fs::dynamic::file::{Device, DeviceOps};
 use crate::core::fs::imp::dev::framebuffer::FrameBuffer;
+use crate::core::fs::pseudo::dynamic::{DirMaker, DynamicDir, DynamicFs};
+use crate::core::fs::pseudo::file::{Device, DeviceOps};
 use crate::core::random::RANDOM_GENERATOR;
 use alloc::sync::Arc;
 use axdisplay::get_main_display;

@@ -1,5 +1,8 @@
-use core::{any::Any, time::Duration};
+use core::{any::Any, iter, time::Duration};
 
+use crate::core::fs::pseudo::dir::PseudoDirOps;
+use alloc::borrow::Cow;
+use alloc::boxed::Box;
 use alloc::{borrow::ToOwned, collections::btree_map::BTreeMap, string::String, sync::Arc};
 use axsync::{Mutex, RawMutex};
 use inherit_methods_macro::inherit_methods;
@@ -84,6 +87,7 @@ impl FilesystemOps<RawMutex> for DynamicFs {
     }
 }
 
+#[derive(Clone)]
 pub enum DynNodeOps {
     Dir(DirMaker),
     File(Arc<dyn FileNodeOps<RawMutex>>),
@@ -135,17 +139,20 @@ pub struct DynamicDir {
     node: DynamicNode,
     this: WeakDirEntry<RawMutex>,
     children: Arc<BTreeMap<String, DynNodeOps>>,
+    pseudo_ops: Option<Arc<dyn PseudoDirOps>>,
 }
 impl DynamicDir {
     fn new(
         node: DynamicNode,
         children: Arc<BTreeMap<String, DynNodeOps>>,
         this: WeakDirEntry<RawMutex>,
+        pseudo_ops: Option<Arc<dyn PseudoDirOps>>,
     ) -> Arc<DynamicDir> {
         Arc::new(Self {
             node,
             this,
             children,
+            pseudo_ops,
         })
     }
 
@@ -162,17 +169,23 @@ impl Drop for DynamicNode {
 pub struct DynamicDirBuilder {
     fs: Arc<DynamicFs>,
     children: BTreeMap<String, DynNodeOps>,
+    pseudo_ops: Option<Arc<dyn PseudoDirOps>>,
 }
 impl DynamicDirBuilder {
     pub fn new(fs: Arc<DynamicFs>) -> Self {
         Self {
             fs,
             children: BTreeMap::new(),
+            pseudo_ops: None,
         }
     }
 
     pub fn add(&mut self, name: impl Into<String>, ops: impl Into<DynNodeOps>) {
         self.children.insert(name.into(), ops.into());
+    }
+
+    pub fn set_pseudo_ops(&mut self, ops: impl PseudoDirOps + 'static) {
+        self.pseudo_ops = Some(Arc::new(ops));
     }
 
     pub fn build(self) -> DirMaker {
@@ -186,6 +199,7 @@ impl DynamicDirBuilder {
                 ),
                 children.clone(),
                 this,
+                self.pseudo_ops.clone(),
             )
         })
     }
@@ -251,15 +265,23 @@ impl NodeOps<RawMutex> for DynamicDir {
 
 impl DirNodeOps<RawMutex> for DynamicDir {
     fn read_dir(&self, offset: u64, sink: &mut dyn DirEntrySink) -> VfsResult<usize> {
-        let children = [DOT, DOTDOT]
-            .into_iter()
-            .chain(self.children.keys().map(|it| it.as_str()));
+        let pseudo_children = if let Some(pseudo_ops) = &self.pseudo_ops {
+            pseudo_ops.list_children()
+        } else {
+            Box::new(iter::empty())
+        };
+        let special_children = [DOT, DOTDOT].iter().map(|s| Cow::Borrowed(*s));
+        let ordinary_children = self.children.keys().map(|k| Cow::Borrowed(k.as_str()));
+        let all_children = special_children
+            .chain(ordinary_children)
+            .chain(pseudo_children);
 
         let this_entry = self.this.upgrade().unwrap();
         let this_dir = this_entry.as_dir()?;
 
         let mut count = 0;
-        for (i, name) in children.enumerate().skip(offset as usize) {
+        for (i, name) in all_children.enumerate().skip(offset as usize) {
+            let name = name.as_ref();
             let metadata = match name {
                 DOT => this_entry.metadata(),
                 DOTDOT => this_entry
@@ -280,8 +302,15 @@ impl DirNodeOps<RawMutex> for DynamicDir {
     }
 
     fn lookup(&self, name: &str) -> VfsResult<DirEntry<RawMutex>> {
-        let ops = self.children.get(name).ok_or(VfsError::ENOENT)?;
+        let ops = if let Some(ops) = self.children.get(name) {
+            Cow::Borrowed(ops)
+        } else if let Some(pseudo_ops) = &self.pseudo_ops {
+            Cow::Owned(pseudo_ops.get_child(name)?)
+        } else {
+            return Err(VfsError::ENOENT);
+        };
         let reference = Reference::new(self.this.upgrade(), name.to_owned());
+        let ops = ops.as_ref();
         Ok(match ops {
             DynNodeOps::Dir(maker) => {
                 DirEntry::new_dir(|this| DirNode::new(maker(this)), reference)

@@ -1,6 +1,6 @@
 use crate::core::file::fd::{FileDescriptor, FileLike};
 use crate::core::file::file::File;
-use crate::core::fs::dynamic::file::Device;
+use crate::core::fs::pseudo::file::Device;
 use alloc::sync::Arc;
 
 pub fn get_device_by_fd(fd: FileDescriptor) -> Option<Arc<Device>> {

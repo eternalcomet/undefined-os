@@ -28,6 +28,23 @@ where
     }
 }
 
+pub struct WithResult<F>(pub F)
+where
+    F: Fn() -> VfsResult<Vec<u8>> + Send + Sync + 'static;
+
+impl<F> SimpleFileOps for WithResult<F>
+where
+    F: Fn() -> VfsResult<Vec<u8>> + Send + Sync + 'static,
+{
+    fn read_all(&self) -> VfsResult<Cow<[u8]>> {
+        Ok(Cow::Owned(self.0()?))
+    }
+
+    fn write_all(&self, _data: &[u8]) -> VfsResult<()> {
+        Err(VfsError::EBADF)
+    }
+}
+
 pub struct SimpleFile {
     node: DynamicNode,
     ops: Arc<dyn SimpleFileOps>,
@@ -35,6 +52,18 @@ pub struct SimpleFile {
 impl SimpleFile {
     pub fn new(fs: Arc<DynamicFs>, ops: impl SimpleFileOps + 'static) -> Arc<Self> {
         let node = DynamicNode::new(fs, NodeType::RegularFile, NodePermission::default());
+        Arc::new(Self {
+            node,
+            ops: Arc::new(ops),
+        })
+    }
+    pub fn create(
+        fs: Arc<DynamicFs>,
+        node_type: NodeType,
+        node_permission: NodePermission,
+        ops: impl SimpleFileOps + 'static,
+    ) -> Arc<Self> {
+        let node = DynamicNode::new(fs, node_type, node_permission);
         Arc::new(Self {
             node,
             ops: Arc::new(ops),
