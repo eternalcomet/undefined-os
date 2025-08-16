@@ -38,7 +38,7 @@ impl File {
 
 impl FileLike for File {
     fn read(&self, buf: &mut [u8]) -> LinuxResult<usize> {
-        Ok(self.inner().read(buf)?)
+        self.inner().read(buf)
     }
 
     fn write(&self, buf: &[u8]) -> LinuxResult<usize> {
@@ -46,7 +46,7 @@ impl FileLike for File {
     }
 
     fn status(&self) -> LinuxResult<Metadata> {
-        Ok(self.inner().metadata()?)
+        self.inner().metadata()
     }
 
     fn poll(&self) -> LinuxResult<PollState> {

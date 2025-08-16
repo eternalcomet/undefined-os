@@ -32,7 +32,7 @@ impl Directory {
 
 impl FileLike for Directory {
     fn read(&self, _buf: &mut [u8]) -> LinuxResult<usize> {
-        Err(LinuxError::EISDIR)
+        Err(LinuxError::EBADF)
     }
     fn write(&self, _buf: &[u8]) -> LinuxResult<usize> {
         // Not open for writing.

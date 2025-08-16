@@ -5,13 +5,11 @@
 use alloc::collections::BTreeMap;
 use alloc::collections::btree_map::Entry;
 use alloc::sync::Arc;
-use core::{ffi::c_int, time::Duration};
+use core::ffi::c_int;
 
-use crate::core::file::fd::{FdFlags, FileLike, fd_add, fd_lookup};
-use crate::utils::task::task_yield_interruptable;
+use crate::core::file::fd::{FileLike, fd_lookup};
 use axerrno::{LinuxError, LinuxResult};
 use axfs_ng::api::FileFlags;
-use axhal::time::wall_time;
 use axsync::Mutex;
 use linux_raw_sys::general::{
     EPOLL_CTL_ADD, EPOLL_CTL_DEL, EPOLL_CTL_MOD, EPOLLERR, EPOLLIN, EPOLLOUT, epoll_event,
@@ -98,11 +96,11 @@ impl EpollInstance {
 
 impl FileLike for EpollInstance {
     fn read(&self, _buf: &mut [u8]) -> LinuxResult<usize> {
-        Err(LinuxError::ENOSYS)
+        Err(LinuxError::EINVAL)
     }
 
     fn write(&self, _buf: &[u8]) -> LinuxResult<usize> {
-        Err(LinuxError::ENOSYS)
+        Err(LinuxError::EINVAL)
     }
 
     fn status(&self) -> LinuxResult<Metadata> {
@@ -115,7 +113,7 @@ impl FileLike for EpollInstance {
     }
 
     fn poll(&self) -> LinuxResult<axio::PollState> {
-        Err(LinuxError::ENOSYS)
+        Err(LinuxError::EINVAL)
     }
 
     fn get_flags(&self) -> FileFlags {
