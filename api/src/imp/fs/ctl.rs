@@ -10,7 +10,10 @@ use axhal::time::wall_time;
 use core::ffi::{c_char, c_void};
 use core::mem::offset_of;
 use core::time::Duration;
-use linux_raw_sys::general::{UTIME_NOW, UTIME_OMIT};
+use linux_raw_sys::general::{
+    POSIX_FADV_DONTNEED, POSIX_FADV_NOREUSE, POSIX_FADV_NORMAL, POSIX_FADV_RANDOM,
+    POSIX_FADV_SEQUENTIAL, POSIX_FADV_WILLNEED, UTIME_NOW, UTIME_OMIT,
+};
 use starry_core::task::current_process;
 use syscall_trace::syscall_trace;
 use undefined_process::Pid;
@@ -142,5 +145,25 @@ pub fn sys_utimensat(
         mtime,
         ..Default::default()
     })?;
+    Ok(0)
+}
+
+#[syscall_trace]
+pub fn sys_fadvise(
+    fd: FileDescriptor,
+    offset: isize,
+    size: isize,
+    advice: u32,
+) -> LinuxResult<isize> {
+    let _file_like = fd_lookup(fd)?;
+    match advice {
+        POSIX_FADV_NORMAL
+        | POSIX_FADV_SEQUENTIAL
+        | POSIX_FADV_RANDOM
+        | POSIX_FADV_NOREUSE
+        | POSIX_FADV_WILLNEED
+        | POSIX_FADV_DONTNEED => {}
+        _ => return Err(LinuxError::EINVAL),
+    }
     Ok(0)
 }
