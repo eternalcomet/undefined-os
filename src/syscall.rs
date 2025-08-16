@@ -144,6 +144,7 @@ fn handle_syscall(tf: &mut TrapFrame, syscall_num: usize) -> isize {
         Sysno::set_tid_address => sys_set_tid_address(tf.arg0().into()),
         #[cfg(target_arch = "x86_64")]
         Sysno::access => sys_access(tf.arg0().into(), tf.arg1() as _),
+        Sysno::clock_getres => sys_clock_getres(tf.arg0() as _, tf.arg1().into()),
         Sysno::clock_gettime => sys_clock_gettime(tf.arg0() as _, tf.arg1().into()),
         Sysno::clock_nanosleep => sys_clock_nanosleep(
             tf.arg0() as _,
