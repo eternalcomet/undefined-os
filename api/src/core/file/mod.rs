@@ -6,6 +6,7 @@ pub mod dir;
 pub mod epoll;
 pub mod fd;
 pub mod file;
+pub mod pathfd;
 pub mod pipe;
 pub mod stdio;
 pub mod stub;

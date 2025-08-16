@@ -2,8 +2,7 @@ use core::ffi::c_int;
 
 use crate::core::file::dir::Directory;
 use crate::core::file::fd::{
-    FdFlags, FileDescriptor, FileLike, fd_add, fd_add_at, fd_get_flags, fd_lookup, fd_remove,
-    fd_set_flags,
+    FdFlags, FileDescriptor, fd_add, fd_add_at, fd_get_flags, fd_lookup, fd_remove, fd_set_flags,
 };
 use crate::interface::user::identity::{sys_getegid, sys_geteuid};
 use crate::utils::path::{fd_add_result, get_fs_context};
@@ -11,7 +10,7 @@ use axerrno::{LinuxError, LinuxResult};
 use axfs_ng::api::{FileFlags, open};
 use linux_raw_sys::general::{
     AT_FDCWD, F_DUPFD, F_DUPFD_CLOEXEC, F_GETFD, F_GETFL, F_SETFD, F_SETFL, O_CLOEXEC, O_NOFOLLOW,
-    O_RDONLY, O_RDWR, O_WRONLY,
+    O_PATH, O_RDONLY, O_RDWR, O_WRONLY,
 };
 use starry_core::resource::ResourceLimitType;
 use starry_core::task::current_process_data;
@@ -73,7 +72,8 @@ pub fn sys_open_impl(
     } else {
         FdFlags::empty()
     };
-    let fd = fd_add_result(result, fd_flags)?;
+    let is_open_path = (flags & O_PATH) != 0;
+    let fd = fd_add_result(result, fd_flags, is_open_path)?;
     Ok(fd as _)
 }
 

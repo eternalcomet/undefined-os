@@ -2,6 +2,7 @@ use crate::core::file::FsLocation;
 use crate::core::file::dir::Directory;
 use crate::core::file::fd::{FdFlags, FileDescriptor, FileLike, fd_add, fd_lookup};
 use crate::core::file::file::File;
+use crate::core::file::pathfd::PathFile;
 use alloc::sync::Arc;
 use axerrno::{LinuxError, LinuxResult};
 use axfs_ng::api::{FS_CONTEXT, FsContext, OpenResult, resolve_path, resolve_path_existed};
@@ -108,9 +109,16 @@ pub fn resolve_path_at_existed(
 pub fn fd_add_result(
     open_result: OpenResult<RawMutex>,
     fd_flags: FdFlags,
+    is_open_path: bool,
 ) -> LinuxResult<FileDescriptor> {
     let file_like: Arc<dyn FileLike> = match open_result {
-        OpenResult::File(file) => Arc::new(File::new(file)),
+        OpenResult::File(file) => {
+            if is_open_path {
+                Arc::new(PathFile::new(file)) // O_PATH
+            } else {
+                Arc::new(File::new(file))
+            }
+        }
         OpenResult::Directory(dir) => Arc::new(Directory::new(dir)),
     };
     fd_add(file_like, fd_flags)
