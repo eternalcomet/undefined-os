@@ -426,6 +426,20 @@ fn handle_syscall(tf: &mut TrapFrame, syscall_num: usize) -> isize {
         Sysno::sched_setaffinity => {
             sys_sched_setaffinity(tf.arg0() as _, tf.arg1() as _, tf.arg2().into())
         }
+        Sysno::memfd_create => sys_openstub(),
+        Sysno::open_tree => sys_openstub(),
+        Sysno::fsopen => sys_openstub(),
+        Sysno::fspick => sys_openstub(),
+        Sysno::bpf => sys_openstub(),
+        Sysno::io_uring_setup => sys_openstub(),
+        Sysno::perf_event_open => sys_openstub(),
+        Sysno::userfaultfd => sys_openstub(),
+        Sysno::inotify_init1 => sys_openstub(),
+        Sysno::pidfd_open => sys_openstub(),
+        Sysno::eventfd2 => sys_openstub(),
+        Sysno::timerfd_create => sys_openstub(),
+        Sysno::signalfd4 => sys_openstub(),
+        Sysno::fanotify_init => sys_openstub(),
         Sysno::sched_setparam => stub_bypass(sysno),
         Sysno::sched_getparam => stub_bypass(sysno),
         Sysno::sched_setscheduler => stub_bypass(sysno),

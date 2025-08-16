@@ -8,6 +8,7 @@ pub mod fd;
 pub mod file;
 pub mod pipe;
 pub mod stdio;
+pub mod stub;
 
 pub type ApiFile = api::File<RawMutex>;
 pub type ApiDir = api::Directory<RawMutex>;
