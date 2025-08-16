@@ -177,6 +177,18 @@ impl FdTable {
             table.remove(id);
         }
     }
+
+    pub fn close_on_exec(&self) {
+        let mut table = self.inner.write();
+        let all_ids: Vec<_> = table.ids().collect();
+        for id in all_ids {
+            if let Some(item) = table.get(id)
+                && item.flags.contains(FdFlags::CLOSE_ON_EXEC)
+            {
+                table.remove(id);
+            }
+        }
+    }
 }
 
 // TODO: do not use axns

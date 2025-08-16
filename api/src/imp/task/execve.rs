@@ -1,3 +1,4 @@
+use crate::core::file::fd::FD_TABLE;
 use crate::utils::path::resolve_path_at_cwd;
 use alloc::string::String;
 use alloc::vec::Vec;
@@ -51,6 +52,9 @@ pub fn sys_execve_impl(
     // set name and path
     current().set_name(&path);
     *process_data.command_line.lock() = args;
+
+    // handle close on exec
+    FD_TABLE.close_on_exec();
 
     // reset some process attributes
     // TODO: reset signal dispositions, mmap, shm, etc.
