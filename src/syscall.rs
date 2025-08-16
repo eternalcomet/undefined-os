@@ -227,6 +227,7 @@ fn handle_syscall(tf: &mut TrapFrame, syscall_num: usize) -> isize {
         Sysno::lstat => sys_lstat(tf.arg0().into(), tf.arg1().into()),
         #[cfg(target_arch = "x86_64")]
         Sysno::lchown => sys_lchown(tf.arg0().into(), tf.arg1() as _, tf.arg2() as _),
+        Sysno::madvise => sys_madvise(tf.arg0().into(), tf.arg1() as _, tf.arg2() as _),
         #[cfg(target_arch = "x86_64")]
         Sysno::mkdir => sys_mkdir(tf.arg0().into(), tf.arg1() as _),
         Sysno::mkdirat => sys_mkdirat(tf.arg0() as _, tf.arg1().into(), tf.arg2() as _),
