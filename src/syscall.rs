@@ -3,11 +3,12 @@ use axhal::{
     arch::TrapFrame,
     trap::{SYSCALL, register_trap_handler},
 };
+use linux_raw_sys::net::__be16;
 use starry_core::task::{time_stat_from_kernel_to_user, time_stat_from_user_to_kernel};
 use syscalls::Sysno;
 use undefined_os_api::imp::fs::*;
 use undefined_os_api::imp::mm::*;
-use undefined_os_api::imp::net::socket::*;
+use undefined_os_api::imp::net::sock::*;
 use undefined_os_api::imp::sys::*;
 use undefined_os_api::imp::task::signal::*;
 use undefined_os_api::imp::task::*;
@@ -30,7 +31,7 @@ fn handle_syscall(tf: &mut TrapFrame, syscall_num: usize) -> isize {
     let sysno = Sysno::new(syscall_num as _);
     if sysno.is_none() {
         warn!("Invalid syscall number: {}", syscall_num);
-        return -LinuxError::EINVAL.code() as _;
+        return -LinuxError::ENOSYS.code() as _;
     }
     let sysno = sysno.unwrap();
     info!("[syscall] <{:?}> begin", sysno);
@@ -215,6 +216,7 @@ fn handle_syscall(tf: &mut TrapFrame, syscall_num: usize) -> isize {
         ),
         Sysno::getegid => sys_getegid(),
         Sysno::geteuid => sys_geteuid(),
+        Sysno::getpeername => sys_getpeername(tf.arg0() as _, tf.arg1() as _, tf.arg2() as _),
         Sysno::setpgid => sys_setpgid(tf.arg0() as _, tf.arg1() as _),
         Sysno::getpgid => sys_getpgid(tf.arg0() as _),
         Sysno::getgid => sys_getgid(),
@@ -231,6 +233,14 @@ fn handle_syscall(tf: &mut TrapFrame, syscall_num: usize) -> isize {
         #[cfg(target_arch = "x86_64")]
         Sysno::mkdir => sys_mkdir(tf.arg0().into(), tf.arg1() as _),
         Sysno::mkdirat => sys_mkdirat(tf.arg0() as _, tf.arg1().into(), tf.arg2() as _),
+        #[cfg(target_arch = "x86_64")]
+        Sysno::mknod => sys_mknod(tf.arg0().into(), tf.arg1() as _, tf.arg2() as _),
+        Sysno::mknodat => sys_mknodat(
+            tf.arg0() as _,
+            tf.arg1().into(),
+            tf.arg2() as _,
+            tf.arg3() as _,
+        ),
         #[cfg(target_arch = "x86_64")]
         Sysno::pipe => sys_pipe(tf.arg0().into()),
         #[cfg(target_arch = "x86_64")]
@@ -393,6 +403,7 @@ fn handle_syscall(tf: &mut TrapFrame, syscall_num: usize) -> isize {
             tf.arg3() as _,
             tf.arg4() as _,
         ),
+        Sysno::getsockopt => stub_bypass(sysno),
         Sysno::sendto => sys_sendto(
             tf.arg0() as _,
             tf.arg1() as _,
@@ -413,9 +424,6 @@ fn handle_syscall(tf: &mut TrapFrame, syscall_num: usize) -> isize {
         Sysno::listen => sys_listen(tf.arg0() as _, tf.arg1() as _),
         Sysno::accept => sys_accept(tf.arg0() as _, tf.arg1() as _, tf.arg2() as _),
         Sysno::connect => sys_connect(tf.arg0() as _, tf.arg1() as _, tf.arg2() as _),
-        #[cfg(target_arch = "x86_64")]
-        Sysno::access => stub_bypass(sysno), // TODO: implement access
-        Sysno::faccessat => stub_bypass(sysno),
         Sysno::sync => stub_bypass(sysno),
         Sysno::fsync => stub_bypass(sysno),
         Sysno::truncate => sys_truncate(tf.arg0().into(), tf.arg1() as _),
@@ -426,35 +434,20 @@ fn handle_syscall(tf: &mut TrapFrame, syscall_num: usize) -> isize {
         Sysno::setgid => stub_bypass(sysno),
         Sysno::setuid => stub_bypass(sysno),
         Sysno::umask => stub_bypass(sysno),
+        Sysno::setsid => stub_bypass(sysno),
         Sysno::get_mempolicy => stub_bypass(sysno),
-        Sysno::socketpair => stub_bypass(sysno),
+        Sysno::socketpair => sys_socketpair(
+            tf.arg0() as _,
+            tf.arg1() as _,
+            tf.arg2() as _,
+            tf.arg3().into(),
+        ),
         Sysno::sched_getaffinity => {
             sys_sched_getaffinity(tf.arg0() as _, tf.arg1() as _, tf.arg2().into())
         }
         Sysno::sched_setaffinity => {
             sys_sched_setaffinity(tf.arg0() as _, tf.arg1() as _, tf.arg2().into())
         }
-        Sysno::memfd_create => sys_openstub(),
-        Sysno::open_tree => sys_openstub(),
-        Sysno::fsopen => sys_openstub(),
-        Sysno::fspick => sys_openstub(),
-        Sysno::bpf => sys_openstub(),
-        Sysno::io_uring_setup => sys_openstub(),
-        Sysno::perf_event_open => sys_openstub(),
-        Sysno::userfaultfd => sys_openstub(),
-        Sysno::inotify_init1 => sys_openstub(),
-        Sysno::pidfd_open => sys_openstub(),
-        Sysno::eventfd2 => sys_openstub(),
-        Sysno::timerfd_create => sys_openstub(),
-        Sysno::signalfd4 => sys_openstub(),
-        Sysno::fanotify_init => sys_openstub(),
-        Sysno::sched_setparam => stub_bypass(sysno),
-        Sysno::sched_getparam => stub_bypass(sysno),
-        Sysno::sched_setscheduler => stub_bypass(sysno),
-        Sysno::sched_getscheduler => stub_bypass(sysno),
-        Sysno::msync => stub_bypass(sysno),
-        Sysno::setresuid => stub_bypass(sysno),
-        Sysno::setsid => stub_bypass(sysno),
         _ => stub_unimplemented(syscall_num),
     };
     let ans = result.unwrap_or_else(|err| -err.code() as _);
