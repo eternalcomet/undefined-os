@@ -5,7 +5,7 @@ use crate::imp::fs::{
     sys_copy_file_range_impl, sys_pread_impl, sys_pwrite_impl, sys_read_impl, sys_truncate_impl,
     sys_write_impl,
 };
-use crate::ptr::{UserInOutPtr, UserInPtr, UserOutPtr, nullable};
+use crate::ptr::{PtrWrapper, UserInOutPtr, UserInPtr, UserOutPtr, nullable};
 use crate::utils::path::resolve_path_at_cwd;
 use axerrno::{LinuxError, LinuxResult};
 use axfs_ng::api::FileFlags;
@@ -111,9 +111,18 @@ pub fn sys_writev(
             return Err(LinuxError::EINVAL);
         }
         let buf_ptr = UserInPtr::<u8>::from(io.base_addr as usize);
-        let buf = buf_ptr.get_as_slice(io.length as _)?;
-        let write_len = sys_write_impl(&*file_like, buf)?;
-        total_written += write_len;
+        let buf = nullable!(buf_ptr.get_as_slice(io.length as _))?;
+        if let Some(buf) = buf {
+            let write_len = sys_write_impl(&*file_like, buf)?;
+            total_written += write_len;
+        } else {
+            if io.length == 0 {
+                // If the length is zero, we do not write anything.
+                continue;
+            } else {
+                return Err(LinuxError::EFAULT);
+            }
+        }
     }
     Ok(total_written)
 }
