@@ -304,10 +304,18 @@ pub fn sys_rt_sigtimedwait(
 ) -> LinuxResult<isize> {
     check_sigset_size(sigsetsize)?;
 
-    let set = unsafe { *set.get()? };
+    let mut set = unsafe { *set.get()? };
     let timeout: Option<Duration> = timeout
         .nullable(UserConstPtr::get)?
         .map(|ts| unsafe { *ts }.into());
+
+    debug!(
+        "[sys_rt_sigtimedwait] wait set: {:?}, timeout: {:?}",
+        set, timeout
+    );
+
+    set.add(Signo::SIGKILL);
+    set.add(Signo::SIGSTOP);
 
     let Some(sig) = current_thread_data().signal.wait_timeout(set, timeout) else {
         return Err(LinuxError::EAGAIN);
@@ -315,6 +323,10 @@ pub fn sys_rt_sigtimedwait(
 
     if let Some(info) = info.nullable(UserPtr::get)? {
         unsafe { *info = sig.0 };
+    }
+
+    if sig.signo() == Signo::SIGKILL || sig.signo() == Signo::SIGSTOP {
+        sys_exit_impl(0, 0, false);
     }
 
     Ok(0)
