@@ -59,7 +59,7 @@ pub fn sys_open_impl(
     let create_user = Some((uid, gid));
 
     // 这里不使用 `resolve_path_at` 是因为我们需要容忍可能不存在的文件
-    let mode = Some(create_mode);
+    let mode = Some(create_mode & 0o7777);
     let result = if parent_fd == AT_FDCWD {
         open(path, &context, open_flags, mode, create_user, no_follow)?
     } else {
@@ -146,7 +146,10 @@ pub fn sys_fcntl(fd: c_int, op: c_int, arg: isize) -> LinuxResult<isize> {
                 .lock()
                 .get_soft(&ResourceLimitType::NOFILE) as FileDescriptor;
             while new_fd < limit {
-                if fd_add_at(new_fd, file_like.clone(), fd_flags).is_ok() {
+                if fd_lookup(new_fd).is_err() {
+                    // new_fd does not exist
+                    debug!("[sys_fcntl] F_DUPFD: fd = {}, new_fd = {}", fd, new_fd);
+                    fd_add_at(new_fd, file_like.clone(), fd_flags)?;
                     return Ok(new_fd as _);
                 }
                 new_fd += 1;
@@ -155,22 +158,26 @@ pub fn sys_fcntl(fd: c_int, op: c_int, arg: isize) -> LinuxResult<isize> {
         }
         F_GETFD => {
             // Get the file descriptor flags for fd.
+            debug!("[sys_fcntl] F_GETFD: fd = {}", fd);
             return Ok(fd_get_flags(fd)?.bits() as _);
         }
         F_SETFD => {
             // Set the file descriptor flags for fd to arg.
             let flags = FdFlags::from_bits_truncate(arg as _);
+            debug!("[sys_fcntl] F_SETFD: fd = {}, flags = {:?}", fd, flags);
             fd_set_flags(fd, flags)?;
             return Ok(0);
         }
         F_GETFL => {
             // Get the file status flags for fd.
             let file_flags = file_like.get_flags();
+            debug!("[sys_fcntl] F_GETFL: fd = {}, flags = {:?}", fd, file_flags);
             return Ok(from_file_flags(file_flags) as _);
         }
         F_SETFL => {
             // Set the file status flags for fd to arg.
             let flags = to_file_flags(arg as _);
+            debug!("[sys_fcntl] F_SETFL: fd = {}, flags = {:?}", fd, flags);
             file_like.set_flags(flags);
             return Ok(0);
         }

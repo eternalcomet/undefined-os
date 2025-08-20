@@ -1,5 +1,6 @@
 use crate::core::file::FsLocation;
 use crate::core::file::stdio::{stdin, stdout};
+use crate::core::net::socket::general::Socket;
 use alloc::sync::Arc;
 use alloc::vec::Vec;
 use axerrno::{LinuxError, LinuxResult};
@@ -52,6 +53,11 @@ pub trait FileLike: Send + Sync {
 
     fn type_mismatch_error(&self) -> LinuxError {
         LinuxError::EINVAL
+    }
+
+    // TODO: better way to handle sockets
+    fn as_socket(&self) -> Option<&dyn Socket> {
+        None
     }
 }
 
@@ -226,7 +232,7 @@ pub fn fd_add(file_like: Arc<dyn FileLike>, flags: FdFlags) -> LinuxResult<FileD
     FD_TABLE.add(file_like, flags)
 }
 
-/// Add a file-like object to fd table at a specific fd.
+/// Add a file-like object to fd table at a specific fd, replace the existing one.
 pub fn fd_add_at(
     fd: FileDescriptor,
     file_like: Arc<dyn FileLike>,
